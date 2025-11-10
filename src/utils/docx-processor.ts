@@ -17,13 +17,8 @@ export class DOCXProcessor {
     try {
       onProgress?.('Reading DOCX file...')
 
-      // Convert ArrayBuffer to Buffer for mammoth
-      const buffer = Buffer.from(arrayBuffer)
-
-      onProgress?.('Extracting text...')
-
-      // Extract text from DOCX
-      const result = await mammoth.extractRawText({ buffer })
+      // mammoth expects an arrayBuffer property
+      const result = await mammoth.extractRawText({ arrayBuffer })
 
       if (result.messages.length > 0) {
         console.warn('DOCX extraction warnings:', result.messages)
@@ -50,14 +45,10 @@ export class DOCXProcessor {
 
     try {
       onProgress?.('Reading DOCX file...')
-
-      // Convert ArrayBuffer to Buffer for mammoth
-      const buffer = Buffer.from(arrayBuffer)
-
       onProgress?.('Converting to HTML...')
 
-      // Convert DOCX to HTML
-      const result = await mammoth.convertToHtml({ buffer })
+      // mammoth expects an arrayBuffer property
+      const result = await mammoth.convertToHtml({ arrayBuffer })
 
       if (result.messages.length > 0) {
         console.warn('DOCX conversion warnings:', result.messages)
