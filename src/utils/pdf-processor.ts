@@ -19,13 +19,13 @@ export class PDFProcessor {
     try {
       onProgress?.(0, 100)
       
-      // Convert ArrayBuffer to Buffer for pdf-parse
-      const buffer = Buffer.from(arrayBuffer)
+      // Convert ArrayBuffer to Uint8Array for pdf-parse
+      const uint8Array = new Uint8Array(arrayBuffer)
       
       onProgress?.(30, 100)
       
       // Parse PDF
-      const data = await pdfParse(buffer)
+      const data = await pdfParse(uint8Array)
       
       onProgress?.(100, 100)
       
@@ -48,11 +48,11 @@ export class PDFProcessor {
     creator?: string
   }> {
     try {
-      // Convert ArrayBuffer to Buffer for pdf-parse
-      const buffer = Buffer.from(arrayBuffer)
+      // Convert ArrayBuffer to Uint8Array for pdf-parse
+      const uint8Array = new Uint8Array(arrayBuffer)
       
       // Parse PDF
-      const data = await pdfParse(buffer)
+      const data = await pdfParse(uint8Array)
       
       return {
         numPages: data.numpages,
