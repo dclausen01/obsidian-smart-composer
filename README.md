@@ -1,13 +1,11 @@
 <h1 align="center">Smart Composer</h1>
 
 <p align="center">
-  <a href="https://github.com/glowingjade/obsidian-smart-composer/wiki">Documentation</a>
+  <a href="https://github.com/glowingjade/obsidian-smart-composer/wiki">Original Documentation</a>
   ·
-  <a href="https://github.com/glowingjade/obsidian-smart-composer/issues">Report Bug</a>
-  ·
-  <a href="https://github.com/glowingjade/obsidian-smart-composer/discussions">Discussions</a>
+  <a href="https://github.com/dclausen01/obsidian-smart-composer/issues">Report Bug</a>
 </p>
-
+<h2>Fork of the original https://github.com/glowingjade/obsidian-smart-composer by Heesu Suh</h2>
 > [!WARNING]
 > **⚠️ Maintenance Notice**
 >
