@@ -1,12 +1,8 @@
 import * as pdfjsLib from 'pdfjs-dist'
 
 // Configure PDF.js to work without worker for Obsidian compatibility
-// Workers require external scripts which are blocked by Obsidian's CSP
-// This will make PDF processing slightly slower but avoids CSP issues
-if (typeof window !== 'undefined') {
-  // Disable worker - process PDFs synchronously
-  pdfjsLib.GlobalWorkerOptions.workerSrc = ''
-}
+// This avoids CSP issues while maintaining functionality
+pdfjsLib.GlobalWorkerOptions.workerPort = null
 
 export interface PDFProcessorOptions {
   maxPages?: number
