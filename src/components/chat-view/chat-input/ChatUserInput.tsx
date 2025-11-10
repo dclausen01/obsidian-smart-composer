@@ -9,6 +9,7 @@ import {
   useRef,
   useState,
 } from 'react'
+import { Notice } from 'obsidian'
 
 import { useApp } from '../../../contexts/app-context'
 import {
@@ -222,10 +223,39 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
     }
 
     const handleUploadDocuments = async (documents: File[]) => {
-      const mentionableDocuments = await Promise.all(
-        documents.map((doc) => createDocumentMentionable(doc)),
-      )
-      handleCreateDocumentMentionables(mentionableDocuments)
+      try {
+        const results = await Promise.all(
+          documents.map(async (doc) => {
+            try {
+              return await createDocumentMentionable(doc)
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : 'Unknown error'
+              new Notice(`Failed to process ${doc.name}: ${message}`)
+              return null
+            }
+          }),
+        )
+
+        const successfulDocuments = results.filter(
+          (doc): doc is MentionableDocument => doc !== null,
+        )
+
+        if (successfulDocuments.length > 0) {
+          handleCreateDocumentMentionables(successfulDocuments)
+        }
+
+        if (successfulDocuments.length < documents.length) {
+          new Notice(
+            `${documents.length - successfulDocuments.length} document(s) failed to process`,
+          )
+        }
+      } catch (error) {
+        new Notice(
+          'Failed to process documents: ' +
+            (error instanceof Error ? error.message : 'Unknown error'),
+        )
+      }
     }
 
     const handleSubmit = (options: { useVaultSearch?: boolean } = {}) => {

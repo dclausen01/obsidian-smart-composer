@@ -358,6 +358,39 @@
   }
 }
 
+/* Document Preview Styles */
+.smtcmp-document-preview {
+  padding: 1rem;
+  border-radius: 8px;
+  background-color: var(--background-secondary);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.smtcmp-document-preview h4 {
+  margin: 0 0 0.5rem 0;
+  color: var(--text-normal);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.smtcmp-document-preview-status {
+  font-size: 0.875rem;
+  color: var(--text-muted);
+  margin-bottom: 1rem;
+  font-style: italic;
+}
+
+.smtcmp-document-preview-content {
+  font-size: 0.875rem;
+  line-height: 1.6;
+  color: var(--text-normal);
+}
+
+.smtcmp-document-preview-content .markdown-preview-view {
+  padding: 0;
+}
+
 /**
  * ChatUserInput
  */

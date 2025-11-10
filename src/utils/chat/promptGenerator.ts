@@ -14,6 +14,7 @@ import {
 import { ContentPart, RequestMessage } from '../../types/llm/request'
 import {
   MentionableBlock,
+  MentionableDocument,
   MentionableFile,
   MentionableFolder,
   MentionableImage,
@@ -374,6 +375,26 @@ ${await this.getWebsiteContent(url)}
 `
           : ''
 
+      const documents = message.mentionables.filter(
+        (m): m is MentionableDocument => m.type === 'document',
+      )
+
+      const documentPrompt =
+        documents.length > 0
+          ? `## Uploaded Documents
+${documents
+  .map(({ name, content, mimeType, processingStatus }) => {
+    if (processingStatus !== 'completed') {
+      return `Document "${name}" - Status: ${processingStatus}`
+    }
+    return `\`\`\`${name} (${mimeType})
+${content}
+\`\`\`\n`
+  })
+  .join('\n')}
+`
+          : ''
+
       const imageDataUrls = message.mentionables
         .filter((m): m is MentionableImage => m.type === 'image')
         .map(({ data }) => data)
@@ -395,7 +416,7 @@ ${await this.getWebsiteContent(url)}
           ),
           {
             type: 'text',
-            text: `${filePrompt}${blockPrompt}${urlPrompt}\n\n${query}\n\n`,
+            text: `${filePrompt}${blockPrompt}${urlPrompt}${documentPrompt}\n\n${query}\n\n`,
           },
         ],
         shouldUseRAG,

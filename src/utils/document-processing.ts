@@ -1,5 +1,7 @@
 import { Notice } from 'obsidian'
 import { MentionableDocument } from '../types/mentionable'
+import { PDFProcessor as PDFLib } from './pdf-processor'
+import { DOCXProcessor as DOCXLib } from './docx-processor'
 
 export interface DocumentProcessingResult {
   success: boolean
@@ -41,30 +43,30 @@ export class PDFProcessor implements DocumentProcessor {
     try {
       onProgress?.(10)
       
-      // TODO: Implement actual PDF parsing
-      // For now, return a placeholder that indicates PDF processing is not yet implemented
-      await new Promise(resolve => setTimeout(resolve, 1000)) // Simulate processing time
-      onProgress?.(50)
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      onProgress?.(20)
       
-      // Placeholder implementation - will be replaced with actual PDF parsing
-      const placeholderContent = `[PDF Content Placeholder]
-
-File: ${file.name}
-Size: ${(file.size / 1024).toFixed(2)} KB
-Type: ${file.type}
-
-Note: This is a placeholder. Full PDF text extraction will be implemented in the next version.
-Please ensure the file contains selectable text (not scanned images).
-For scanned documents, OCR functionality will be added in a future update.`
-
+      // Get metadata first
+      const metadata = await PDFLib.getMetadata(arrayBuffer)
+      onProgress?.(30)
+      
+      // Extract text with progress updates
+      const content = await PDFLib.extractText(arrayBuffer, {
+        onProgress: (current, total) => {
+          const progress = 30 + (current / total) * 60
+          onProgress?.(Math.round(progress))
+        }
+      })
+      
       onProgress?.(100)
       
       return {
         success: true,
-        content: placeholderContent,
+        content,
         metadata: {
-          extractedAt: Date.now(),
-          hasImages: false // TODO: Detect images in PDF
+          pageCount: metadata.numPages,
+          extractedAt: Date.now()
         }
       }
     } catch (error) {
@@ -102,24 +104,28 @@ export class DOCXProcessor implements DocumentProcessor {
     try {
       onProgress?.(10)
       
-      // TODO: Implement actual DOCX parsing
-      await new Promise(resolve => setTimeout(resolve, 800))
-      onProgress?.(50)
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      onProgress?.(30)
       
-      const placeholderContent = `[DOCX Content Placeholder]
-
-File: ${file.name}
-Size: ${(file.size / 1024).toFixed(2)} KB
-Type: ${file.type}
-
-Note: This is a placeholder. Full DOCX text extraction will be implemented in the next version.`
-
+      // Extract text
+      const content = await DOCXLib.extractText(arrayBuffer, {
+        onProgress: (status) => {
+          if (status.includes('Reading')) onProgress?.(40)
+          else if (status.includes('Extracting')) onProgress?.(60)
+          else if (status.includes('Complete')) onProgress?.(90)
+        }
+      })
+      
       onProgress?.(100)
+      
+      const wordCount = content.split(/\s+/).filter(word => word.length > 0).length
       
       return {
         success: true,
-        content: placeholderContent,
+        content,
         metadata: {
+          wordCount,
           extractedAt: Date.now()
         }
       }
