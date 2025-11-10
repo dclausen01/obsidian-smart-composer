@@ -41,7 +41,7 @@ Upgrade your note-taking experience with our Contextual AI Assistant, inspired b
 
 <img src="https://github.com/user-attachments/assets/b22175d4-80a2-4122-8555-2b9dd4987f93" alt="SC2-2_MultiContext.png" width="360"/>
 
-Now, you can **add website links and images** as additional context for your queries.
+Now, you can **add website links, images, and documents** as additional context for your queries.
 
 - Website content is automatically extracted
 - **Image support**: Add images directly to your chat through:
@@ -49,7 +49,10 @@ Now, you can **add website links and images** as additional context for your que
   - Drag & drop
   - Paste from clipboard
 - **Youtube link support**: YouTube transcripts are fetched and included as context
-- **Coming soon**: Support for external files (PDF, DOCX, ...)
+- **Document support**: Upload and reference external files directly in your chat:
+  - **DOCX/DOC**: Word documents with automatic text extraction
+  - **XLSX/XLS**: Excel spreadsheets (all sheets extracted as CSV format)
+  - **Text files**: TXT, Markdown, CSV, and TSV files
 
 ### Apply Edit
 
@@ -131,7 +134,7 @@ To see our up-to-date project roadmap and progress, please check out our [GitHub
 
 Some of our planned features include:
 
-- Support for external files (PDF, DOCX, etc.)
+- Extended document support (PDF, ODT, ODS, and more formats)
 - Mentioning with tags or other metadata
 
 ## Feedback and Support

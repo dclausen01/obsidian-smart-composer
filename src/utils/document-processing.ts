@@ -1,5 +1,5 @@
-import { Notice } from 'obsidian'
 import { MentionableDocument } from '../types/mentionable'
+
 import { DOCXProcessor as DOCXLib } from './docx-processor'
 import { XLSXProcessor as XLSXLib } from './xlsx-processor'
 
