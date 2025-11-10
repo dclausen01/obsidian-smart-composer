@@ -73,7 +73,6 @@
     "openai": "^4.91.1",
     "parse5": "^7.1.2",
     "path-browserify": "^1.0.1",
-    "pdf-parse": "^2.2.4",
     "pdfjs-dist": "^5.4.394",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

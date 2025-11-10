@@ -1,5 +1,4 @@
-// eslint-disable-next-line @typescript-eslint/no-var-requires
-const pdfParse = require('pdf-parse')
+import * as pdfjsLib from 'pdfjs-dist'
 
 export interface PDFProcessorOptions {
   maxPages?: number
@@ -14,22 +13,48 @@ export class PDFProcessor {
     arrayBuffer: ArrayBuffer,
     options: PDFProcessorOptions = {},
   ): Promise<string> {
-    const { onProgress } = options
+    const { maxPages, onProgress } = options
 
     try {
       onProgress?.(0, 100)
       
-      // Convert ArrayBuffer to Uint8Array for pdf-parse
-      const uint8Array = new Uint8Array(arrayBuffer)
+      // Load PDF without worker to avoid CSP issues
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        useSystemFonts: true,
+        disableWorker: true, // Disable worker completely
+      } as any)
       
-      onProgress?.(30, 100)
+      onProgress?.(20, 100)
       
-      // Parse PDF
-      const data = await pdfParse(uint8Array)
-      
+      const pdf = await loadingTask.promise
+      const numPages = maxPages ? Math.min(pdf.numPages, maxPages) : pdf.numPages
+      const textContents: string[] = []
+
+      // Extract text from each page
+      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
+        const progress = 20 + (pageNum / numPages) * 70
+        onProgress?.(Math.round(progress), 100)
+
+        const page = await pdf.getPage(pageNum)
+        const textContent = await page.getTextContent()
+
+        // Combine text items into a single string for this page
+        const pageText = textContent.items
+          .map((item: any) => {
+            if ('str' in item) {
+              return item.str
+            }
+            return ''
+          })
+          .join(' ')
+
+        textContents.push(`--- Page ${pageNum} ---\n${pageText}`)
+      }
+
       onProgress?.(100, 100)
       
-      return data.text
+      return textContents.join('\n\n')
     } catch (error) {
       throw new Error(
         `Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -48,18 +73,22 @@ export class PDFProcessor {
     creator?: string
   }> {
     try {
-      // Convert ArrayBuffer to Uint8Array for pdf-parse
-      const uint8Array = new Uint8Array(arrayBuffer)
-      
-      // Parse PDF
-      const data = await pdfParse(uint8Array)
-      
+      const loadingTask = pdfjsLib.getDocument({
+        data: arrayBuffer,
+        disableWorker: true, // Disable worker completely
+      } as any)
+      const pdf = await loadingTask.promise
+      const metadata = await pdf.getMetadata()
+
+      // Type assertion for metadata.info
+      const info = metadata.info as Record<string, unknown> | null
+
       return {
-        numPages: data.numpages,
-        title: data.info?.Title,
-        author: data.info?.Author,
-        subject: data.info?.Subject,
-        creator: data.info?.Creator,
+        numPages: pdf.numPages,
+        title: info?.Title as string | undefined,
+        author: info?.Author as string | undefined,
+        subject: info?.Subject as string | undefined,
+        creator: info?.Creator as string | undefined,
       }
     } catch (error) {
       throw new Error(
