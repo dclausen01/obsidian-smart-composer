@@ -1,8 +1,5 @@
-import * as pdfjsLib from 'pdfjs-dist'
-
-// Configure PDF.js to work without worker for Obsidian compatibility
-// This avoids CSP issues while maintaining functionality
-pdfjsLib.GlobalWorkerOptions.workerPort = null
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const pdfParse = require('pdf-parse')
 
 export interface PDFProcessorOptions {
   maxPages?: number
@@ -17,40 +14,22 @@ export class PDFProcessor {
     arrayBuffer: ArrayBuffer,
     options: PDFProcessorOptions = {},
   ): Promise<string> {
-    const { maxPages, onProgress } = options
+    const { onProgress } = options
 
     try {
-      // Load the PDF document
-      const loadingTask = pdfjsLib.getDocument({
-        data: arrayBuffer,
-        useSystemFonts: true,
-      })
-      const pdf = await loadingTask.promise
-
-      const numPages = maxPages ? Math.min(pdf.numPages, maxPages) : pdf.numPages
-      const textContents: string[] = []
-
-      // Extract text from each page
-      for (let pageNum = 1; pageNum <= numPages; pageNum++) {
-        onProgress?.(pageNum, numPages)
-
-        const page = await pdf.getPage(pageNum)
-        const textContent = await page.getTextContent()
-
-        // Combine text items into a single string for this page
-        const pageText = textContent.items
-          .map((item) => {
-            if ('str' in item) {
-              return item.str
-            }
-            return ''
-          })
-          .join(' ')
-
-        textContents.push(`--- Page ${pageNum} ---\n${pageText}`)
-      }
-
-      return textContents.join('\n\n')
+      onProgress?.(0, 100)
+      
+      // Convert ArrayBuffer to Buffer for pdf-parse
+      const buffer = Buffer.from(arrayBuffer)
+      
+      onProgress?.(30, 100)
+      
+      // Parse PDF
+      const data = await pdfParse(buffer)
+      
+      onProgress?.(100, 100)
+      
+      return data.text
     } catch (error) {
       throw new Error(
         `Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
@@ -69,21 +48,18 @@ export class PDFProcessor {
     creator?: string
   }> {
     try {
-      const loadingTask = pdfjsLib.getDocument({
-        data: arrayBuffer,
-      })
-      const pdf = await loadingTask.promise
-      const metadata = await pdf.getMetadata()
-
-      // Type assertion for metadata.info
-      const info = metadata.info as Record<string, unknown> | null
-
+      // Convert ArrayBuffer to Buffer for pdf-parse
+      const buffer = Buffer.from(arrayBuffer)
+      
+      // Parse PDF
+      const data = await pdfParse(buffer)
+      
       return {
-        numPages: pdf.numPages,
-        title: info?.Title as string | undefined,
-        author: info?.Author as string | undefined,
-        subject: info?.Subject as string | undefined,
-        creator: info?.Creator as string | undefined,
+        numPages: data.numpages,
+        title: data.info?.Title,
+        author: data.info?.Author,
+        subject: data.info?.Subject,
+        creator: data.info?.Creator,
       }
     } catch (error) {
       throw new Error(
