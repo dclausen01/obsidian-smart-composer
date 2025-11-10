@@ -1,0 +1,10 @@
+- [x] Projektstruktur analysiert
+- [x] Einfachen Implementierungsplan entwickelt
+- [x] TODO-Liste erstellt
+- [x] Mentionable-System um Document-Typen erweitern
+- [x] PDF/Document Processing Utilities implementieren
+- [x] UI-Komponenten für Document-Upload erweitern
+- [x] Integration in Chat-Interface
+- [x] RAG-Integration für verarbeitete Dokumente
+- [x] Testing und Validierung
+- [x] Code-Überprüfung und Build-Test abgeschlossen

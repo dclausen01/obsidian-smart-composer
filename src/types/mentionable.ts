@@ -34,6 +34,15 @@ export type MentionableImage = {
   mimeType: string
   data: string // base64
 }
+export type MentionableDocument = {
+  type: 'document'
+  name: string
+  mimeType: string
+  content: string // Extrahierter Text nach OCR
+  originalFileName: string
+  processingStatus: 'pending' | 'processing' | 'completed' | 'failed'
+  sourceFile?: TFile
+}
 export type Mentionable =
   | MentionableFile
   | MentionableFolder
@@ -42,6 +51,7 @@ export type Mentionable =
   | MentionableBlock
   | MentionableUrl
   | MentionableImage
+  | MentionableDocument
 export type SerializedMentionableFile = {
   type: 'file'
   file: string
@@ -64,6 +74,14 @@ export type SerializedMentionableBlock = {
 }
 export type SerializedMentionableUrl = MentionableUrl
 export type SerializedMentionableImage = MentionableImage
+export type SerializedMentionableDocument = {
+  type: 'document'
+  name: string
+  mimeType: string
+  content: string
+  originalFileName: string
+  processingStatus: 'pending' | 'processing' | 'completed' | 'failed'
+}
 export type SerializedMentionable =
   | SerializedMentionableFile
   | SerializedMentionableFolder
@@ -72,3 +90,4 @@ export type SerializedMentionable =
   | SerializedMentionableBlock
   | SerializedMentionableUrl
   | SerializedMentionableImage
+  | SerializedMentionableDocument

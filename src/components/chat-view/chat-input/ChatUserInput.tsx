@@ -14,6 +14,7 @@ import { useApp } from '../../../contexts/app-context'
 import {
   Mentionable,
   MentionableImage,
+  MentionableDocument,
   SerializedMentionable,
 } from '../../../types/mentionable'
 import {
@@ -22,9 +23,11 @@ import {
   serializeMentionable,
 } from '../../../utils/chat/mentionable'
 import { fileToMentionableImage } from '../../../utils/llm/image'
+import { createDocumentMentionable } from '../../../utils/document-processing'
 import { openMarkdownFile, readTFileContent } from '../../../utils/obsidian'
 import { ObsidianMarkdown } from '../ObsidianMarkdown'
 
+import { DocumentUploadButton } from './DocumentUploadButton'
 import { ImageUploadButton } from './ImageUploadButton'
 import LexicalContentEditable from './LexicalContentEditable'
 import MentionableBadge from './MentionableBadge'
@@ -169,6 +172,29 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
       [mentionables, setMentionables],
     )
 
+    const handleCreateDocumentMentionables = useCallback(
+      (mentionableDocuments: MentionableDocument[]) => {
+        const newMentionableDocuments = mentionableDocuments.filter(
+          (m) =>
+            !mentionables.some(
+              (mentionable) =>
+                getMentionableKey(serializeMentionable(mentionable)) ===
+                getMentionableKey(serializeMentionable(m)),
+            ),
+        )
+        if (newMentionableDocuments.length === 0) return
+        setMentionables([...mentionables, ...newMentionableDocuments])
+        setDisplayedMentionableKey(
+          getMentionableKey(
+            serializeMentionable(
+              newMentionableDocuments[newMentionableDocuments.length - 1],
+            ),
+          ),
+        )
+      },
+      [mentionables, setMentionables],
+    )
+
     const handleMentionableDelete = (mentionable: Mentionable) => {
       const mentionableKey = getMentionableKey(
         serializeMentionable(mentionable),
@@ -193,6 +219,13 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
         images.map((image) => fileToMentionableImage(image)),
       )
       handleCreateImageMentionables(mentionableImages)
+    }
+
+    const handleUploadDocuments = async (documents: File[]) => {
+      const mentionableDocuments = await Promise.all(
+        documents.map((doc) => createDocumentMentionable(doc)),
+      )
+      handleCreateDocumentMentionables(mentionableDocuments)
     }
 
     const handleSubmit = (options: { useVaultSearch?: boolean } = {}) => {
@@ -277,6 +310,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           </div>
           <div className="smtcmp-chat-user-input-controls__buttons">
             <ImageUploadButton onUpload={handleUploadImages} />
+            <DocumentUploadButton onUpload={handleUploadDocuments} />
             <SubmitButton onClick={() => handleSubmit()} />
             <VaultChatButton
               onClick={() => {
@@ -349,6 +383,10 @@ function MentionableContentPreview({
     return displayedMentionable?.type === 'image' ? displayedMentionable : null
   }, [displayedMentionable])
 
+  const displayDocument: MentionableDocument | null = useMemo(() => {
+    return displayedMentionable?.type === 'document' ? displayedMentionable : null
+  }, [displayedMentionable])
+
   return displayFileContent ? (
     <div className="smtcmp-chat-user-input-file-content-preview">
       <ObsidianMarkdown content={displayFileContent} scale="xs" />
@@ -356,6 +394,18 @@ function MentionableContentPreview({
   ) : displayImage ? (
     <div className="smtcmp-chat-user-input-file-content-preview">
       <img src={displayImage.data} alt={displayImage.name} />
+    </div>
+  ) : displayDocument ? (
+    <div className="smtcmp-chat-user-input-file-content-preview">
+      <div className="smtcmp-document-preview">
+        <h4>📄 {displayDocument.name}</h4>
+        <p className="smtcmp-document-preview-status">
+          Status: {displayDocument.processingStatus}
+        </p>
+        <div className="smtcmp-document-preview-content">
+          <ObsidianMarkdown content={displayDocument.content} scale="xs" />
+        </div>
+      </div>
     </div>
   ) : null
 }
