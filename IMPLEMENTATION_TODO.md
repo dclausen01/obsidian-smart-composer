@@ -8,3 +8,4 @@
 - [x] RAG-Integration für verarbeitete Dokumente
 - [x] Testing und Validierung
 - [x] Code-Überprüfung und Build-Test abgeschlossen
+- [x] GitHub-Fork erstellt
