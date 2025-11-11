@@ -146,6 +146,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
             // Get MIME type from file extension
             const ext = deserialized.file.extension.toLowerCase()
             const mimeTypeMap: Record<string, string> = {
+              'pdf': 'application/pdf',
               'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
               'doc': 'application/msword',
               'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

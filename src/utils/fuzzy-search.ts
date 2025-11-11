@@ -155,15 +155,15 @@ export function fuzzySearch(app: App, query: string): SearchableMentionable[] {
   const currentFile = app.workspace.getActiveFile()
   const openFiles = getOpenFiles(app)
 
-  // Support markdown, office documents, and other common file types
+  // Support markdown, office documents, PDFs, and other common file types
   const allSupportedFiles = app.vault.getFiles().filter((file) => {
     const extension = file.extension.toLowerCase()
-    return ['md', 'docx', 'doc', 'xlsx', 'xls', 'txt', 'csv'].includes(extension)
+    return ['md', 'pdf', 'docx', 'doc', 'xlsx', 'xls', 'txt', 'csv'].includes(extension)
   })
 
   const allFilesWithMetadata: SearchItem[] = allSupportedFiles.map((file) => {
     const extension = file.extension.toLowerCase()
-    const isDocumentType = ['docx', 'doc', 'xlsx', 'xls'].includes(extension)
+    const isDocumentType = ['pdf', 'docx', 'doc', 'xlsx', 'xls'].includes(extension)
     
     if (isDocumentType) {
       return {
@@ -269,6 +269,8 @@ function searchItemToMentionable(item: SearchItem): SearchableMentionable {
 function getMimeTypeForFile(file: TFile): string {
   const extension = file.extension.toLowerCase()
   switch (extension) {
+    case 'pdf':
+      return 'application/pdf'
     case 'doc':
     case 'docx':
       return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'

@@ -50,6 +50,7 @@ Now, you can **add website links, images, and documents** as additional context 
   - Paste from clipboard
 - **Youtube link support**: YouTube transcripts are fetched and included as context
 - **Document support**: Upload and reference external files directly in your chat:
+  - **PDF**: PDF documents with automatic text extraction
   - **DOCX/DOC**: Word documents with automatic text extraction
   - **XLSX/XLS**: Excel spreadsheets (all sheets extracted as CSV format)
   - **Text files**: TXT, Markdown, CSV, and TSV files
@@ -134,7 +135,7 @@ To see our up-to-date project roadmap and progress, please check out our [GitHub
 
 Some of our planned features include:
 
-- Extended document support (PDF, ODT, ODS, and more formats)
+- Extended document support (ODT, ODS, and more formats)
 - Mentioning with tags or other metadata
 
 ## Feedback and Support

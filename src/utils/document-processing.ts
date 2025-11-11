@@ -1,6 +1,7 @@
 import { MentionableDocument } from '../types/mentionable'
 
 import { DOCXProcessor as DOCXLib } from './docx-processor'
+import { PDFProcessor as PDFLib } from './pdf-processor'
 import { XLSXProcessor as XLSXLib } from './xlsx-processor'
 
 export interface DocumentProcessingResult {
@@ -77,6 +78,66 @@ export class DOCXProcessor implements DocumentProcessor {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error occurred during DOCX processing'
+      }
+    }
+  }
+}
+
+export class PDFProcessor implements DocumentProcessor {
+  private static instance: PDFProcessor | null = null
+
+  static getInstance(): PDFProcessor {
+    if (!PDFProcessor.instance) {
+      PDFProcessor.instance = new PDFProcessor()
+    }
+    return PDFProcessor.instance
+  }
+
+  getDisplayName(): string {
+    return 'PDF Processor'
+  }
+
+  getSupportedMimeTypes(): string[] {
+    return ['application/pdf']
+  }
+
+  async processFile(file: File, onProgress?: (progress: number) => void): Promise<DocumentProcessingResult> {
+    try {
+      onProgress?.(10)
+      
+      // Read file as ArrayBuffer
+      const arrayBuffer = await file.arrayBuffer()
+      onProgress?.(20)
+      
+      // Get metadata first
+      const metadata = await PDFLib.getMetadata(arrayBuffer)
+      onProgress?.(30)
+      
+      // Extract text
+      const content = await PDFLib.extractText(arrayBuffer, {
+        onProgress: (status) => {
+          if (status.includes('Reading')) onProgress?.(40)
+          else if (status.includes('Loading')) onProgress?.(60)
+          else if (status.includes('Extracting')) onProgress?.(80)
+          else if (status.includes('Complete')) onProgress?.(95)
+        }
+      })
+      
+      onProgress?.(100)
+      
+      return {
+        success: true,
+        content,
+        metadata: {
+          pageCount: metadata.numPages,
+          extractedAt: Date.now()
+        }
+      }
+    } catch (error) {
+      console.error('PDF processing error:', error)
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error occurred during PDF processing'
       }
     }
   }
@@ -205,6 +266,7 @@ export class DocumentProcessorManager {
   private processors: DocumentProcessor[] = []
 
   constructor() {
+    this.registerProcessor(PDFProcessor.getInstance())
     this.registerProcessor(DOCXProcessor.getInstance())
     this.registerProcessor(XLSXProcessor.getInstance())
     this.registerProcessor(TextProcessor.getInstance())
