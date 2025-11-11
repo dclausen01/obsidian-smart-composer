@@ -12,6 +12,7 @@ import {
 import { Notice } from 'obsidian'
 
 import { useApp } from '../../../contexts/app-context'
+import { useSettings } from '../../../contexts/settings-context'
 import {
   Mentionable,
   MentionableImage,
@@ -72,6 +73,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
     ref,
   ) => {
     const app = useApp()
+    const { settings } = useSettings()
 
     const editorRef = useRef<LexicalEditor | null>(null)
     const contentEditableRef = useRef<HTMLDivElement>(null)
@@ -166,7 +168,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 })
 
                 // Process the document to extract content
-                const processed = await createDocumentMentionable(file)
+                const processed = await createDocumentMentionable(file, undefined, settings)
                 return processed
               } catch (error) {
                 console.error('Failed to process document:', error)
@@ -204,7 +206,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
               })
 
               // Process the document to extract content
-              const processed = await createDocumentMentionable(file)
+              const processed = await createDocumentMentionable(file, undefined, settings)
               return processed
             } catch (error) {
               console.error('Failed to process document:', error)

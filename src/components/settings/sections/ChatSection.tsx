@@ -137,6 +137,61 @@ export function ChatSection() {
           }}
         />
       </ObsidianSetting>
+
+      <div className="smtcmp-settings-header">PDF & OCR</div>
+
+      <ObsidianSetting
+        name="Enable OCR"
+        desc="Automatically apply OCR (text recognition) to PDFs with little or no text. This helps extract text from scanned documents and images."
+      >
+        <ObsidianToggle
+          value={settings.ocrOptions.enabled}
+          onChange={async (value) => {
+            await setSettings({
+              ...settings,
+              ocrOptions: {
+                ...settings.ocrOptions,
+                enabled: value,
+              },
+            })
+          }}
+        />
+      </ObsidianSetting>
+
+      <ObsidianSetting
+        name="OCR language"
+        desc="Language to use for OCR text recognition. Choose the primary language of your documents."
+      >
+        <ObsidianDropdown
+          value={settings.ocrOptions.language}
+          options={{
+            'eng': 'English',
+            'deu': 'German (Deutsch)',
+            'fra': 'French (Français)',
+            'spa': 'Spanish (Español)',
+            'ita': 'Italian (Italiano)',
+            'por': 'Portuguese (Português)',
+            'nld': 'Dutch (Nederlands)',
+            'pol': 'Polish (Polski)',
+            'rus': 'Russian (Русский)',
+            'jpn': 'Japanese (日本語)',
+            'chi_sim': 'Chinese Simplified (简体中文)',
+            'chi_tra': 'Chinese Traditional (繁體中文)',
+            'kor': 'Korean (한국어)',
+            'ara': 'Arabic (العربية)',
+            'hin': 'Hindi (हिन्दी)',
+          }}
+          onChange={async (value) => {
+            await setSettings({
+              ...settings,
+              ocrOptions: {
+                ...settings.ocrOptions,
+                language: value,
+              },
+            })
+          }}
+        />
+      </ObsidianSetting>
     </div>
   )
 }

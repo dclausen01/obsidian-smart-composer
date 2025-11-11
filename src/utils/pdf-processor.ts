@@ -4,6 +4,7 @@ import Tesseract from 'tesseract.js'
 export interface PDFProcessorOptions {
   onProgress?: (status: string) => void
   enableOCR?: boolean
+  ocrLanguage?: string
 }
 
 export class PDFProcessor {
@@ -17,7 +18,7 @@ export class PDFProcessor {
     arrayBuffer: ArrayBuffer,
     options: PDFProcessorOptions = {},
   ): Promise<{ content: string; pageCount: number }> {
-    const { onProgress, enableOCR = true } = options
+    const { onProgress, enableOCR = true, ocrLanguage = 'eng' } = options
 
     try {
       onProgress?.('Reading PDF file...')
@@ -45,7 +46,7 @@ export class PDFProcessor {
         onProgress?.('Low text detected, applying OCR...')
         
         // Perform OCR on all pages
-        const ocrText = await this.performOCR(uint8Array, pdf.numPages, onProgress)
+        const ocrText = await this.performOCR(uint8Array, pdf.numPages, ocrLanguage, onProgress)
         
         // Combine original text with OCR text
         const combinedText = text.trim() ? `${text}\n\n${ocrText}` : ocrText
@@ -77,6 +78,7 @@ export class PDFProcessor {
   private static async performOCR(
     pdfData: Uint8Array,
     pageCount: number,
+    language: string,
     onProgress?: (status: string) => void,
   ): Promise<string> {
     const ocrResults: string[] = []
@@ -95,7 +97,7 @@ export class PDFProcessor {
         const dataUrl = `data:image/png;base64,${base64Image}`
 
         // Perform OCR
-        const result = await Tesseract.recognize(dataUrl, 'eng', {
+        const result = await Tesseract.recognize(dataUrl, language, {
           logger: () => {}, // Suppress Tesseract logs
         })
 

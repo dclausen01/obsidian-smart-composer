@@ -87,6 +87,17 @@ export const smartComposerSettingsSchema = z.object({
       enableTools: true,
       maxAutoIterations: 1,
     }),
+
+  // OCR options for PDF processing
+  ocrOptions: z
+    .object({
+      enabled: z.boolean(),
+      language: z.string(),
+    })
+    .catch({
+      enabled: true,
+      language: 'eng',
+    }),
 })
 export type SmartComposerSettings = z.infer<typeof smartComposerSettingsSchema>
 

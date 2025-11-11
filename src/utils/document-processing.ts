@@ -1,4 +1,5 @@
 import { MentionableDocument } from '../types/mentionable'
+import { SmartComposerSettings } from '../settings/schema/setting.types'
 
 import { DOCXProcessor as DOCXLib } from './docx-processor'
 import { PDFProcessor as PDFLib } from './pdf-processor'
@@ -18,7 +19,11 @@ export interface DocumentProcessingResult {
 }
 
 export interface DocumentProcessor {
-  processFile(file: File, onProgress?: (progress: number) => void): Promise<DocumentProcessingResult>
+  processFile(
+    file: File, 
+    onProgress?: (progress: number) => void,
+    settings?: SmartComposerSettings
+  ): Promise<DocumentProcessingResult>
   getSupportedMimeTypes(): string[]
   getDisplayName(): string
 }
@@ -101,7 +106,11 @@ export class PDFProcessor implements DocumentProcessor {
     return ['application/pdf']
   }
 
-  async processFile(file: File, onProgress?: (progress: number) => void): Promise<DocumentProcessingResult> {
+  async processFile(
+    file: File, 
+    onProgress?: (progress: number) => void,
+    settings?: SmartComposerSettings
+  ): Promise<DocumentProcessingResult> {
     try {
       onProgress?.(10)
       
@@ -111,6 +120,8 @@ export class PDFProcessor implements DocumentProcessor {
       
       // Extract text and get page count in one go
       const { content, pageCount } = await PDFLib.extractText(arrayBuffer, {
+        enableOCR: settings?.ocrOptions.enabled ?? true,
+        ocrLanguage: settings?.ocrOptions.language ?? 'eng',
         onProgress: (status) => {
           if (status.includes('Reading')) onProgress?.(40)
           else if (status.includes('Loading')) onProgress?.(60)
@@ -306,7 +317,8 @@ export const documentProcessorManager = new DocumentProcessorManager()
 // Utility function to create MentionableDocument from file
 export async function createDocumentMentionable(
   file: File, 
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
+  settings?: SmartComposerSettings
 ): Promise<MentionableDocument> {
   const processor = documentProcessorManager.getProcessorForFile(file)
   
@@ -314,7 +326,7 @@ export async function createDocumentMentionable(
     throw new Error(`Unsupported file type: ${file.type}`)
   }
 
-  const result = await processor.processFile(file, onProgress)
+  const result = await processor.processFile(file, onProgress, settings)
   
   if (!result.success) {
     throw new Error(result.error || 'Document processing failed')
