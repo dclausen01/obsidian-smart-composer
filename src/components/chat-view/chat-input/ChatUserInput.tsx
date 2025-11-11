@@ -90,7 +90,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
       },
     }))
 
-    const handleMentionNodeMutation = (
+    const handleMentionNodeMutation = async (
       mutations: NodeMutations<MentionNode>,
     ) => {
       const destroyedMentionableKeys: string[] = []
@@ -129,6 +129,48 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
         }
       })
 
+      // Process document mentionables to extract their content
+      const processedMentionables = await Promise.all(
+        addedMentionables.map(async (m) => {
+          const deserialized = deserializeMentionable(m, app)
+          if (!deserialized) return null
+
+          // If it's a document with pending status and has a sourceFile, process it
+          if (
+            deserialized.type === 'document' &&
+            deserialized.processingStatus === 'pending' &&
+            deserialized.sourceFile
+          ) {
+            try {
+              // Read file and process it
+              const arrayBuffer = await app.vault.adapter.readBinary(
+                deserialized.sourceFile.path,
+              )
+              const blob = new Blob([arrayBuffer])
+              const file = new File([blob], deserialized.sourceFile.name, {
+                type: deserialized.mimeType,
+              })
+
+              // Process the document to extract content
+              const processed = await createDocumentMentionable(file)
+              return processed
+            } catch (error) {
+              console.error('Failed to process document:', error)
+              new Notice(
+                `Failed to process ${deserialized.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              )
+              // Return document with failed status
+              return {
+                ...deserialized,
+                processingStatus: 'failed' as const,
+              }
+            }
+          }
+
+          return deserialized
+        }),
+      )
+
       setMentionables(
         mentionables
           .filter(
@@ -137,11 +179,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 getMentionableKey(serializeMentionable(m)),
               ),
           )
-          .concat(
-            addedMentionables
-              .map((m) => deserializeMentionable(m, app))
-              .filter((v) => !!v),
-          ),
+          .concat(processedMentionables.filter((v) => !!v)),
       )
       if (addedMentionables.length > 0) {
         setDisplayedMentionableKey(
