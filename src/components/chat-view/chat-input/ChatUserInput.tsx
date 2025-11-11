@@ -138,6 +138,8 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           const deserialized = deserializeMentionable(m, app)
           if (!deserialized) return null
 
+          console.log('Processing mentionable:', deserialized.type, deserialized)
+
           // If it's a file mention with a supported document format, convert to document
           if (deserialized.type === 'file') {
             const supportedTypes = documentProcessorManager.getSupportedMimeTypes()
