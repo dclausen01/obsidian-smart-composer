@@ -81,6 +81,7 @@ export type SerializedMentionableDocument = {
   content: string
   originalFileName: string
   processingStatus: 'pending' | 'processing' | 'completed' | 'failed'
+  sourceFile?: string
 }
 export type SerializedMentionable =
   | SerializedMentionableFile

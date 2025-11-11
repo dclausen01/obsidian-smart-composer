@@ -53,6 +53,7 @@ export const serializeMentionable = (
         content: mentionable.content,
         originalFileName: mentionable.originalFileName,
         processingStatus: mentionable.processingStatus,
+        sourceFile: mentionable.sourceFile?.path,
       }
   }
 }
@@ -128,6 +129,9 @@ export const deserializeMentionable = (
         }
       }
       case 'document': {
+        const sourceFile = mentionable.sourceFile
+          ? app.vault.getFileByPath(mentionable.sourceFile)
+          : undefined
         return {
           type: 'document',
           name: mentionable.name,
@@ -135,6 +139,7 @@ export const deserializeMentionable = (
           content: mentionable.content,
           originalFileName: mentionable.originalFileName,
           processingStatus: mentionable.processingStatus,
+          sourceFile: sourceFile ?? undefined,
         }
       }
     }
