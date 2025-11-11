@@ -5,6 +5,7 @@ import {
   MentionableFile,
   MentionableFolder,
   MentionableVault,
+  MentionableDocument,
 } from '../types/mentionable'
 
 import { calculateFileDistance, getOpenFiles } from './obsidian'
@@ -13,6 +14,7 @@ export type SearchableMentionable =
   | MentionableFile
   | MentionableFolder
   | MentionableVault
+  | MentionableDocument
 
 type VaultSearchItem = {
   type: 'vault'
@@ -37,7 +39,16 @@ type FolderWithMetadata = {
   distance: number | null
 }
 
-type SearchItem = FolderWithMetadata | FileWithMetadata | VaultSearchItem
+type DocumentWithMetadata = {
+  type: 'document'
+  path: string
+  name: string
+  file: TFile
+  distance: number | null
+  daysSinceLastModified: number
+}
+
+type SearchItem = FolderWithMetadata | FileWithMetadata | VaultSearchItem | DocumentWithMetadata
 
 function scoreFnWithBoost({
   searchItem,
@@ -76,6 +87,23 @@ function scoreFnWithBoost({
       const { distance } = searchItem
 
       // Boost for nearby folders
+      if (distance !== null && distance > 0 && distance <= 5) {
+        const nearbyBoost = 1 + 0.5 / Math.max(distance - 1, 1)
+        boost = Math.max(boost, nearbyBoost)
+      }
+
+      break
+    }
+    case 'document': {
+      const { distance, daysSinceLastModified } = searchItem
+
+      // Boost for recently modified documents
+      if (daysSinceLastModified < 30) {
+        const recentBoost = 1 + 2 / (daysSinceLastModified + 2)
+        boost = Math.max(boost, recentBoost)
+      }
+
+      // Boost for nearby documents
       if (distance !== null && distance > 0 && distance <= 5) {
         const nearbyBoost = 1 + 0.5 / Math.max(distance - 1, 1)
         boost = Math.max(boost, nearbyBoost)
@@ -127,29 +155,51 @@ export function fuzzySearch(app: App, query: string): SearchableMentionable[] {
   const currentFile = app.workspace.getActiveFile()
   const openFiles = getOpenFiles(app)
 
+  // Support markdown, office documents, and other common file types
   const allSupportedFiles = app.vault.getFiles().filter((file) => {
-    const extension = file.extension
-    return extension === 'md'
+    const extension = file.extension.toLowerCase()
+    return ['md', 'docx', 'doc', 'xlsx', 'xls', 'txt', 'csv'].includes(extension)
   })
 
-  const allFilesWithMetadata: SearchItem[] = allSupportedFiles.map((file) => ({
-    type: 'file',
-    path: file.path,
-    name: file.name,
-    file,
-    opened: openFiles.some((f) => f.path === file.path),
-    distance: currentFile
-      ? currentFile === file
-        ? null
-        : calculateFileDistance(currentFile, file)
-      : null,
-    daysSinceLastModified:
-      (Date.now() - file.stat.mtime) / (1000 * 60 * 60 * 24),
-  }))
+  const allFilesWithMetadata: SearchItem[] = allSupportedFiles.map((file) => {
+    const extension = file.extension.toLowerCase()
+    const isDocumentType = ['docx', 'doc', 'xlsx', 'xls'].includes(extension)
+    
+    if (isDocumentType) {
+      return {
+        type: 'document' as const,
+        path: file.path,
+        name: file.name,
+        file,
+        distance: currentFile
+          ? currentFile === file
+            ? null
+            : calculateFileDistance(currentFile, file)
+          : null,
+        daysSinceLastModified:
+          (Date.now() - file.stat.mtime) / (1000 * 60 * 60 * 24),
+      }
+    } else {
+      return {
+        type: 'file' as const,
+        path: file.path,
+        name: file.name,
+        file,
+        opened: openFiles.some((f) => f.path === file.path),
+        distance: currentFile
+          ? currentFile === file
+            ? null
+            : calculateFileDistance(currentFile, file)
+          : null,
+        daysSinceLastModified:
+          (Date.now() - file.stat.mtime) / (1000 * 60 * 60 * 24),
+      }
+    }
+  })
 
   const allFolders = app.vault.getAllFolders()
   const allFoldersWithMetadata: SearchItem[] = allFolders.map((folder) => ({
-    type: 'folder',
+    type: 'folder' as const,
     path: folder.path,
     name: folder.name,
     folder,
@@ -203,5 +253,34 @@ function searchItemToMentionable(item: SearchItem): SearchableMentionable {
       return {
         type: 'vault',
       }
+    case 'document':
+      return {
+        type: 'document',
+        name: item.file.name,
+        mimeType: getMimeTypeForFile(item.file),
+        content: '', // Will be populated when user selects
+        originalFileName: item.file.name,
+        processingStatus: 'pending' as const,
+        sourceFile: item.file,
+      }
+  }
+}
+
+function getMimeTypeForFile(file: TFile): string {
+  const extension = file.extension.toLowerCase()
+  switch (extension) {
+    case 'doc':
+    case 'docx':
+      return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+    case 'xls':
+    case 'xlsx':
+      return 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    case 'txt':
+      return 'text/plain'
+    case 'csv':
+      return 'text/csv'
+    case 'md':
+    default:
+      return 'text/markdown'
   }
 }

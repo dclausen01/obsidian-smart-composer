@@ -123,6 +123,11 @@ class MentionTypeaheadOption extends MenuOption {
         this.name = 'Vault'
         this.mentionable = result
         break
+      case 'document':
+        super(result.name)
+        this.name = result.name
+        this.mentionable = result
+        break
     }
   }
 }

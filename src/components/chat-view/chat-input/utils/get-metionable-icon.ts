@@ -4,6 +4,8 @@ import {
   FoldersIcon,
   ImageIcon,
   LinkIcon,
+  FileText,
+  Table,
 } from 'lucide-react'
 
 import { Mentionable } from '../../../../types/mentionable'
@@ -24,6 +26,14 @@ export const getMentionableIcon = (mentionable: Mentionable) => {
       return LinkIcon
     case 'image':
       return ImageIcon
+    case 'document':
+      if (mentionable.mimeType.includes('word')) {
+        return FileText
+      } else if (mentionable.mimeType.includes('sheet') || mentionable.mimeType.includes('excel')) {
+        return Table
+      } else {
+        return FileIcon
+      }
     default:
       return null
   }
