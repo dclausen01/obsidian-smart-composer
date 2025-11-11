@@ -23,8 +23,11 @@ import {
   getMentionableKey,
   serializeMentionable,
 } from '../../../utils/chat/mentionable'
+import {
+  createDocumentMentionable,
+  documentProcessorManager,
+} from '../../../utils/document-processing'
 import { fileToMentionableImage } from '../../../utils/llm/image'
-import { createDocumentMentionable } from '../../../utils/document-processing'
 import { openMarkdownFile, readTFileContent } from '../../../utils/obsidian'
 import { ObsidianMarkdown } from '../ObsidianMarkdown'
 
@@ -134,6 +137,52 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
         addedMentionables.map(async (m) => {
           const deserialized = deserializeMentionable(m, app)
           if (!deserialized) return null
+
+          // If it's a file mention with a supported document format, convert to document
+          if (deserialized.type === 'file') {
+            const supportedTypes = documentProcessorManager.getSupportedMimeTypes()
+            // Get MIME type from file extension
+            const ext = deserialized.file.extension.toLowerCase()
+            const mimeTypeMap: Record<string, string> = {
+              'docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+              'doc': 'application/msword',
+              'xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+              'xls': 'application/vnd.ms-excel',
+            }
+            const mimeType = mimeTypeMap[ext]
+            
+            if (mimeType && supportedTypes.includes(mimeType)) {
+              try {
+                // Read file and process it
+                const arrayBuffer = await app.vault.adapter.readBinary(
+                  deserialized.file.path,
+                )
+                const blob = new Blob([arrayBuffer])
+                const file = new File([blob], deserialized.file.name, {
+                  type: mimeType,
+                })
+
+                // Process the document to extract content
+                const processed = await createDocumentMentionable(file)
+                return processed
+              } catch (error) {
+                console.error('Failed to process document:', error)
+                new Notice(
+                  `Failed to process ${deserialized.file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                )
+                // Return document with failed status
+                return {
+                  type: 'document' as const,
+                  name: deserialized.file.name,
+                  mimeType,
+                  content: '',
+                  originalFileName: deserialized.file.name,
+                  processingStatus: 'failed' as const,
+                  sourceFile: deserialized.file,
+                }
+              }
+            }
+          }
 
           // If it's a document with pending status and has a sourceFile, process it
           if (
