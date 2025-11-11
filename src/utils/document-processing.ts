@@ -107,14 +107,10 @@ export class PDFProcessor implements DocumentProcessor {
       
       // Read file as ArrayBuffer
       const arrayBuffer = await file.arrayBuffer()
-      onProgress?.(20)
-      
-      // Get metadata first
-      const metadata = await PDFLib.getMetadata(arrayBuffer)
       onProgress?.(30)
       
-      // Extract text
-      const content = await PDFLib.extractText(arrayBuffer, {
+      // Extract text and get page count in one go
+      const { content, pageCount } = await PDFLib.extractText(arrayBuffer, {
         onProgress: (status) => {
           if (status.includes('Reading')) onProgress?.(40)
           else if (status.includes('Loading')) onProgress?.(60)
@@ -129,7 +125,7 @@ export class PDFProcessor implements DocumentProcessor {
         success: true,
         content,
         metadata: {
-          pageCount: metadata.numPages,
+          pageCount,
           extractedAt: Date.now()
         }
       }

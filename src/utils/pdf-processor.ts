@@ -11,7 +11,7 @@ export class PDFProcessor {
   static async extractText(
     arrayBuffer: ArrayBuffer,
     options: PDFProcessorOptions = {},
-  ): Promise<string> {
+  ): Promise<{ content: string; pageCount: number }> {
     const { onProgress } = options
 
     try {
@@ -34,7 +34,10 @@ export class PDFProcessor {
 
       onProgress?.('Complete')
 
-      return text
+      return {
+        content: text,
+        pageCount: pdf.numPages,
+      }
     } catch (error) {
       throw new Error(
         `Failed to extract text from PDF: ${error instanceof Error ? error.message : 'Unknown error'}`,
