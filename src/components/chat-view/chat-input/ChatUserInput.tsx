@@ -142,6 +142,40 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
           console.log('Processing mentionable:', deserialized.type, deserialized)
 
+          // If it's a document with pending status, process it immediately
+          if (
+            deserialized.type === 'document' &&
+            deserialized.processingStatus === 'pending' &&
+            deserialized.sourceFile
+          ) {
+            try {
+              console.log('Processing pending document:', deserialized.sourceFile.path)
+              // Read file and process it
+              const arrayBuffer = await app.vault.adapter.readBinary(
+                deserialized.sourceFile.path,
+              )
+              const blob = new Blob([arrayBuffer])
+              const file = new File([blob], deserialized.sourceFile.name, {
+                type: deserialized.mimeType,
+              })
+
+              // Process the document to extract content
+              const processed = await createDocumentMentionable(file, undefined, settings)
+              console.log('Document processed successfully:', processed.name, 'Content length:', processed.content.length)
+              return processed
+            } catch (error) {
+              console.error('Failed to process pending document:', error)
+              new Notice(
+                `Failed to process ${deserialized.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+              )
+              // Return document with failed status
+              return {
+                ...deserialized,
+                processingStatus: 'failed' as const,
+              }
+            }
+          }
+
           // If it's a file mention with a supported document format, convert to document
           if (deserialized.type === 'file') {
             const supportedTypes = documentProcessorManager.getSupportedMimeTypes()
@@ -185,38 +219,6 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                   processingStatus: 'failed' as const,
                   sourceFile: deserialized.file,
                 }
-              }
-            }
-          }
-
-          // If it's a document with pending status and has a sourceFile, process it
-          if (
-            deserialized.type === 'document' &&
-            deserialized.processingStatus === 'pending' &&
-            deserialized.sourceFile
-          ) {
-            try {
-              // Read file and process it
-              const arrayBuffer = await app.vault.adapter.readBinary(
-                deserialized.sourceFile.path,
-              )
-              const blob = new Blob([arrayBuffer])
-              const file = new File([blob], deserialized.sourceFile.name, {
-                type: deserialized.mimeType,
-              })
-
-              // Process the document to extract content
-              const processed = await createDocumentMentionable(file, undefined, settings)
-              return processed
-            } catch (error) {
-              console.error('Failed to process document:', error)
-              new Notice(
-                `Failed to process ${deserialized.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              )
-              // Return document with failed status
-              return {
-                ...deserialized,
-                processingStatus: 'failed' as const,
               }
             }
           }
