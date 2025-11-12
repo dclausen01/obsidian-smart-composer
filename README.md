@@ -6,15 +6,6 @@
   <a href="https://github.com/dclausen01/obsidian-smart-composer/issues">Report Bug</a>
 </p>
 <h2>Fork of the original https://github.com/glowingjade/obsidian-smart-composer by Heesu Suh</h2>
-> [!WARNING]
-> **⚠️ Maintenance Notice**
->
-> This plugin is currently maintained by a single developer and is **not under active development**.  
-> Occasional updates or bug fixes may still be released, but **issues and feature requests may not be reviewed promptly**.
->
-> **Interested in helping?**  
-> If you'd like to contribute or are maintaining an updated fork, please get in touch.  
-> I’d be happy to add collaborators or highlight community-maintained versions.
 
 > [!NOTE]
 > **🚀 New Feature: Model Context Protocol (MCP) is now available!**
