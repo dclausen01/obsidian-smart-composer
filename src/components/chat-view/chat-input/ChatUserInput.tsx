@@ -78,10 +78,16 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
     const editorRef = useRef<LexicalEditor | null>(null)
     const contentEditableRef = useRef<HTMLDivElement>(null)
     const containerRef = useRef<HTMLDivElement>(null)
+    const mentionablesRef = useRef<Mentionable[]>(mentionables)
 
     const [displayedMentionableKey, setDisplayedMentionableKey] = useState<
       string | null
     >(addedBlockKey ?? null)
+
+    // Keep ref in sync with mentionables
+    useEffect(() => {
+      mentionablesRef.current = mentionables
+    }, [mentionables])
 
     useEffect(() => {
       if (addedBlockKey) {
@@ -335,9 +341,9 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
         try {
           const processed = await createDocumentMentionable(doc, undefined, settings)
           
-          // Update the pending document with processed content
+          // Update the pending document with processed content using ref to get current state
           setMentionables(
-            mentionables.map((m) =>
+            mentionablesRef.current.map((m) =>
               m.type === 'document' &&
               m.name === doc.name &&
               m.processingStatus === 'pending'
@@ -349,9 +355,9 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           const message = error instanceof Error ? error.message : 'Unknown error'
           new Notice(`Failed to process ${doc.name}: ${message}`)
           
-          // Update status to failed
+          // Update status to failed using ref to get current state
           setMentionables(
-            mentionables.map((m) =>
+            mentionablesRef.current.map((m) =>
               m.type === 'document' &&
               m.name === doc.name &&
               m.processingStatus === 'pending'
