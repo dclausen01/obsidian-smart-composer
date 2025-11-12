@@ -1,5 +1,4 @@
-import { extractText, getDocumentProxy, renderPageAsImage } from 'unpdf'
-import Tesseract from 'tesseract.js'
+import { loadPdfJs } from 'obsidian'
 
 export interface PDFProcessorOptions {
   onProgress?: (status: string) => void
@@ -10,6 +9,22 @@ export interface PDFProcessorOptions {
 export class PDFProcessor {
   // Threshold for considering a PDF as "text-light" (characters per page)
   private static readonly TEXT_THRESHOLD_PER_PAGE = 100
+  private static tesseractModule: any = null
+
+  /**
+   * Lazy load tesseract.js module only when needed
+   */
+  private static async initializeTesseract(): Promise<void> {
+    if (this.tesseractModule) return
+
+    try {
+      this.tesseractModule = await import('tesseract.js')
+    } catch (error) {
+      throw new Error(
+        `Failed to load Tesseract module: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
+    }
+  }
 
   /**
    * Extract text content from a PDF file with hybrid OCR support
@@ -21,6 +36,11 @@ export class PDFProcessor {
     const { onProgress, enableOCR = true, ocrLanguage = 'eng' } = options
 
     try {
+      onProgress?.('Loading PDF.js...')
+      
+      // Load Obsidian's PDF.js
+      const pdfjsLib = await loadPdfJs()
+      
       onProgress?.('Reading PDF file...')
 
       // Convert ArrayBuffer to Uint8Array
@@ -28,15 +48,22 @@ export class PDFProcessor {
 
       onProgress?.('Loading PDF document...')
 
-      // Get PDF document proxy
-      const pdf = await getDocumentProxy(uint8Array)
+      // Load PDF document using PDF.js API
+      const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+      const pdf = await loadingTask.promise
 
       onProgress?.('Extracting text...')
 
-      // Extract text with merged pages
-      const { text } = await extractText(pdf, {
-        mergePages: true,
-      })
+      // Extract text from all pages
+      let text = ''
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i)
+        const textContent = await page.getTextContent()
+        const pageText = textContent.items
+          .map((item: any) => item.str)
+          .join(' ')
+        text += pageText + '\n'
+      }
 
       // Check if we have enough text or if OCR is needed
       const textPerPage = text.length / pdf.numPages
@@ -46,7 +73,12 @@ export class PDFProcessor {
         onProgress?.('Low text detected, applying OCR...')
         
         // Perform OCR on all pages
-        const ocrText = await this.performOCR(uint8Array, pdf.numPages, ocrLanguage, onProgress)
+        const ocrText = await this.performOCR(
+          pdfjsLib,
+          pdf,
+          ocrLanguage,
+          onProgress,
+        )
         
         // Combine original text with OCR text
         const combinedText = text.trim() ? `${text}\n\n${ocrText}` : ocrText
@@ -76,25 +108,46 @@ export class PDFProcessor {
    * Perform OCR on all pages of a PDF
    */
   private static async performOCR(
-    pdfData: Uint8Array,
-    pageCount: number,
+    pdfjsLib: any,
+    pdf: any,
     language: string,
     onProgress?: (status: string) => void,
   ): Promise<string> {
+    // Initialize Tesseract
+    await this.initializeTesseract()
+    const Tesseract = this.tesseractModule.default || this.tesseractModule
+
     const ocrResults: string[] = []
 
-    for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
-      onProgress?.(`OCR: Processing page ${pageNum}/${pageCount}...`)
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
+      onProgress?.(`OCR: Processing page ${pageNum}/${pdf.numPages}...`)
 
       try {
-        // Render page as image
-        const imageBuffer = await renderPageAsImage(pdfData, pageNum, {
-          scale: 2, // Higher resolution for better OCR
-        })
-
-        // Convert ArrayBuffer to base64 for Tesseract
-        const base64Image = this.arrayBufferToBase64(imageBuffer)
-        const dataUrl = `data:image/png;base64,${base64Image}`
+        // Get the page
+        const page = await pdf.getPage(pageNum)
+        
+        // Get viewport at scale 2 for better OCR quality
+        const viewport = page.getViewport({ scale: 2 })
+        
+        // Create a canvas to render the page
+        const canvas = document.createElement('canvas')
+        const context = canvas.getContext('2d')
+        
+        if (!context) {
+          throw new Error('Failed to get canvas context')
+        }
+        
+        canvas.width = viewport.width
+        canvas.height = viewport.height
+        
+        // Render page to canvas
+        await page.render({
+          canvasContext: context,
+          viewport: viewport,
+        }).promise
+        
+        // Convert canvas to data URL for Tesseract
+        const dataUrl = canvas.toDataURL('image/png')
 
         // Perform OCR
         const result = await Tesseract.recognize(dataUrl, language, {
@@ -104,6 +157,9 @@ export class PDFProcessor {
         if (result.data.text.trim()) {
           ocrResults.push(`--- Page ${pageNum} ---\n${result.data.text.trim()}`)
         }
+
+        // Allow browser to process other tasks
+        await new Promise(resolve => setTimeout(resolve, 10))
       } catch (error) {
         console.warn(`OCR failed for page ${pageNum}:`, error)
         ocrResults.push(`--- Page ${pageNum} ---\n[OCR failed for this page]`)
@@ -114,26 +170,19 @@ export class PDFProcessor {
   }
 
   /**
-   * Convert ArrayBuffer to base64 string
-   */
-  private static arrayBufferToBase64(buffer: ArrayBuffer): string {
-    const bytes = new Uint8Array(buffer)
-    let binary = ''
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i])
-    }
-    return btoa(binary)
-  }
-
-  /**
    * Get PDF metadata (page count, etc.)
    */
   static async getMetadata(
     arrayBuffer: ArrayBuffer,
   ): Promise<{ numPages: number }> {
     try {
+      // Load Obsidian's PDF.js
+      const pdfjsLib = await loadPdfJs()
+      
       const uint8Array = new Uint8Array(arrayBuffer)
-      const pdf = await getDocumentProxy(uint8Array)
+      const loadingTask = pdfjsLib.getDocument({ data: uint8Array })
+      const pdf = await loadingTask.promise
+
       return { numPages: pdf.numPages }
     } catch (error) {
       throw new Error(

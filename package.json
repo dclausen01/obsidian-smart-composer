@@ -81,7 +81,6 @@
     "remark-gfm": "^4.0.0",
     "shell-env": "^4.0.1",
     "tesseract.js": "^6.0.1",
-    "unpdf": "^1.4.0",
     "uuid": "^10.0.0",
     "vscode-diff": "^2.1.1",
     "xlsx": "^0.18.5",
