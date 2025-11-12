@@ -62,10 +62,14 @@ const context = await esbuild.context({
     ...nodeBuiltins,
   ],
   format: 'cjs',
-  inject: [path.resolve('import-meta-url-shim.js')],
+  inject: [
+    path.resolve('import-meta-url-shim.js'),
+    path.resolve('buffer-shim.js'),
+  ],
   define: {
     'import.meta.url': 'import_meta_url',
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
+    'global': 'globalThis',
   },
   target: 'es2020',
   logLevel: 'info', // 'debug' for more detailed output
