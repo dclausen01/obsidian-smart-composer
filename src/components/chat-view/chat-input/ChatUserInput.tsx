@@ -83,11 +83,16 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
     const [displayedMentionableKey, setDisplayedMentionableKey] = useState<
       string | null
     >(addedBlockKey ?? null)
+    const displayedMentionableKeyRef = useRef<string | null>(displayedMentionableKey)
 
-    // Keep ref in sync with mentionables
+    // Keep refs in sync
     useEffect(() => {
       mentionablesRef.current = mentionables
     }, [mentionables])
+
+    useEffect(() => {
+      displayedMentionableKeyRef.current = displayedMentionableKey
+    }, [displayedMentionableKey])
 
     useEffect(() => {
       if (addedBlockKey) {
@@ -363,7 +368,8 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           )
           
           // Update displayedMentionableKey if the processed document was being displayed
-          if (oldKey && oldKey === displayedMentionableKey) {
+          // Use ref to get current value to avoid stale closure
+          if (oldKey && oldKey === displayedMentionableKeyRef.current) {
             setDisplayedMentionableKey(newKey)
           }
         } catch (error) {
