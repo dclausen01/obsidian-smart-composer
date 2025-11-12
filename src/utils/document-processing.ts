@@ -125,8 +125,21 @@ export class PDFProcessor implements DocumentProcessor {
         onProgress: (status) => {
           if (status.includes('Reading')) onProgress?.(40)
           else if (status.includes('Loading')) onProgress?.(60)
-          else if (status.includes('Extracting')) onProgress?.(80)
-          else if (status.includes('Complete')) onProgress?.(95)
+          else if (status.includes('Extracting')) onProgress?.(70)
+          else if (status.includes('Low text detected')) onProgress?.(75)
+          else if (status.includes('OCR:')) {
+            // Extract page numbers for progress calculation
+            const match = status.match(/OCR: Processing page (\d+)\/(\d+)/)
+            if (match) {
+              const current = parseInt(match[1])
+              const total = parseInt(match[2])
+              const ocrProgress = 75 + Math.floor((current / total) * 20) // 75-95% range
+              onProgress?.(ocrProgress)
+            } else {
+              onProgress?.(80)
+            }
+          }
+          else if (status.includes('Complete')) onProgress?.(100)
         }
       })
       
