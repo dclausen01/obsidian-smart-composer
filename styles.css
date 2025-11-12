@@ -340,6 +340,13 @@
   flex-grow: 0;
 }
 
+.smtcmp-chat-user-input-file-badge-status {
+  color: var(--text-muted);
+  font-size: var(--font-smallest);
+  font-style: italic;
+  flex-shrink: 0;
+}
+
 .smtcmp-chat-user-input-file-badge-current {
   color: var(--color-base-50);
 }

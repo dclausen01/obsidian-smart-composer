@@ -2,6 +2,7 @@ import clsx from 'clsx'
 import { Eye, EyeOff, X } from 'lucide-react'
 import { PropsWithChildren, useCallback } from 'react'
 
+import DotLoader from '../../common/DotLoader'
 import { useSettings } from '../../../contexts/settings-context'
 import {
   Mentionable,
@@ -294,17 +295,30 @@ function DocumentBadge({
   isFocused: boolean
 }) {
   const Icon = getMentionableIcon(mentionable)
+  const isProcessing = ['pending', 'processing'].includes(
+    mentionable.processingStatus,
+  )
+
   return (
     <BadgeBase onDelete={onDelete} onClick={onClick} isFocused={isFocused}>
       <div className="smtcmp-chat-user-input-file-badge-name">
-        {Icon && (
-          <Icon
-            size={12}
-            className="smtcmp-chat-user-input-file-badge-name-icon"
-          />
+        {isProcessing ? (
+          <DotLoader />
+        ) : (
+          Icon && (
+            <Icon
+              size={12}
+              className="smtcmp-chat-user-input-file-badge-name-icon"
+            />
+          )
         )}
         <span>{mentionable.name}</span>
       </div>
+      {isProcessing && (
+        <div className="smtcmp-chat-user-input-file-badge-status">
+          Processing...
+        </div>
+      )}
     </BadgeBase>
   )
 }
