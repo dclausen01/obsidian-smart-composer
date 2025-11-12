@@ -66,6 +66,7 @@ const context = await esbuild.context({
   define: {
     'import.meta.url': 'import_meta_url',
     'process.env.NODE_ENV': JSON.stringify(prod ? 'production' : 'development'),
+    'global': 'globalThis',
   },
   target: 'es2020',
   logLevel: 'info', // 'debug' for more detailed output
