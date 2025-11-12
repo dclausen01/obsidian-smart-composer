@@ -8,7 +8,8 @@ export interface PDFProcessorOptions {
 
 export class PDFProcessor {
   // Threshold for considering a PDF as "text-light" (characters per page)
-  private static readonly TEXT_THRESHOLD_PER_PAGE = 100
+  // Increased to 500 to better detect scanned PDFs with minimal text
+  private static readonly TEXT_THRESHOLD_PER_PAGE = 500
   private static tesseractModule: any = null
 
   /**
@@ -66,8 +67,11 @@ export class PDFProcessor {
       }
 
       // Check if we have enough text or if OCR is needed
-      const textPerPage = text.length / pdf.numPages
+      const textPerPage = text.trim().length / pdf.numPages
       const needsOCR = enableOCR && textPerPage < this.TEXT_THRESHOLD_PER_PAGE
+      
+      // Debug information
+      console.log(`PDF Text extraction: ${text.trim().length} chars total, ${textPerPage.toFixed(1)} per page, OCR needed: ${needsOCR}`)
 
       if (needsOCR) {
         onProgress?.('Low text detected, applying OCR...')
