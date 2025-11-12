@@ -202,35 +202,70 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
             const mimeType = mimeTypeMap[ext]
             
             if (mimeType && supportedTypes.includes(mimeType)) {
-              try {
-                // Read file and process it
-                const arrayBuffer = await app.vault.adapter.readBinary(
-                  deserialized.file.path,
-                )
-                const blob = new Blob([arrayBuffer])
-                const file = new File([blob], deserialized.file.name, {
-                  type: mimeType,
-                })
-
-                // Process the document to extract content
-                const processed = await createDocumentMentionable(file, undefined, settings)
-                return processed
-              } catch (error) {
-                console.error('Failed to process document:', error)
-                new Notice(
-                  `Failed to process ${deserialized.file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-                )
-                // Return document with failed status
-                return {
-                  type: 'document' as const,
-                  name: deserialized.file.name,
-                  mimeType,
-                  content: '',
-                  originalFileName: deserialized.file.name,
-                  processingStatus: 'failed' as const,
-                  sourceFile: deserialized.file,
-                }
+              // Return pending document immediately to show spinner
+              const pendingDoc: MentionableDocument = {
+                type: 'document' as const,
+                name: deserialized.file.name,
+                mimeType,
+                content: '',
+                originalFileName: deserialized.file.name,
+                processingStatus: 'pending' as const,
+                sourceFile: deserialized.file,
               }
+              
+              // Process in background
+              (async () => {
+                try {
+                  // Read file and process it
+                  const arrayBuffer = await app.vault.adapter.readBinary(
+                    deserialized.file.path,
+                  )
+                  const blob = new Blob([arrayBuffer])
+                  const file = new File([blob], deserialized.file.name, {
+                    type: mimeType,
+                  })
+
+                  // Process the document to extract content
+                  const processed = await createDocumentMentionable(file, undefined, settings)
+                  
+                  // Update the pending document with processed content
+                  const oldKey = getMentionableKey(serializeMentionable(pendingDoc))
+                  const newKey = getMentionableKey(serializeMentionable(processed))
+                  
+                  setMentionables(
+                    mentionablesRef.current.map((m) =>
+                      m.type === 'document' &&
+                      m.name === deserialized.file.name &&
+                      m.processingStatus === 'pending'
+                        ? processed
+                        : m,
+                    ),
+                  )
+                  
+                  // Update displayedMentionableKey if needed
+                  if (oldKey === displayedMentionableKeyRef.current) {
+                    setDisplayedMentionableKey(newKey)
+                  }
+                } catch (error) {
+                  console.error('Failed to process document:', error)
+                  new Notice(
+                    `Failed to process ${deserialized.file.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                  )
+                  
+                  // Update status to failed
+                  setMentionables(
+                    mentionablesRef.current.map((m) =>
+                      m.type === 'document' &&
+                      m.name === deserialized.file.name &&
+                      m.processingStatus === 'pending'
+                        ? { ...m, processingStatus: 'failed' as const }
+                        : m,
+                    ),
+                  )
+                }
+              })()
+              
+              return pendingDoc
             }
           }
 
