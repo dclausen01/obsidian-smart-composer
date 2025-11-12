@@ -317,39 +317,50 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
     }
 
     const handleUploadDocuments = async (documents: File[]) => {
-      try {
-        const results = await Promise.all(
-          documents.map(async (doc) => {
-            try {
-              return await createDocumentMentionable(doc, undefined, settings)
-            } catch (error) {
-              const message =
-                error instanceof Error ? error.message : 'Unknown error'
-              new Notice(`Failed to process ${doc.name}: ${message}`)
-              return null
-            }
-          }),
-        )
+      // Create pending document mentionables immediately to show spinner
+      const pendingDocuments: MentionableDocument[] = documents.map((doc) => ({
+        type: 'document' as const,
+        name: doc.name,
+        mimeType: doc.type,
+        content: '',
+        originalFileName: doc.name,
+        processingStatus: 'pending' as const,
+      }))
 
-        const successfulDocuments = results.filter(
-          (doc): doc is MentionableDocument => doc !== null,
-        )
+      // Add pending documents immediately so user sees spinner
+      handleCreateDocumentMentionables(pendingDocuments)
 
-        if (successfulDocuments.length > 0) {
-          handleCreateDocumentMentionables(successfulDocuments)
-        }
-
-        if (successfulDocuments.length < documents.length) {
-          new Notice(
-            `${documents.length - successfulDocuments.length} document(s) failed to process`,
+      // Process documents in background and update status
+      documents.forEach(async (doc) => {
+        try {
+          const processed = await createDocumentMentionable(doc, undefined, settings)
+          
+          // Update the pending document with processed content
+          setMentionables(
+            mentionables.map((m) =>
+              m.type === 'document' &&
+              m.name === doc.name &&
+              m.processingStatus === 'pending'
+                ? processed
+                : m,
+            ),
+          )
+        } catch (error) {
+          const message = error instanceof Error ? error.message : 'Unknown error'
+          new Notice(`Failed to process ${doc.name}: ${message}`)
+          
+          // Update status to failed
+          setMentionables(
+            mentionables.map((m) =>
+              m.type === 'document' &&
+              m.name === doc.name &&
+              m.processingStatus === 'pending'
+                ? { ...m, processingStatus: 'failed' as const }
+                : m,
+            ),
           )
         }
-      } catch (error) {
-        new Notice(
-          'Failed to process documents: ' +
-            (error instanceof Error ? error.message : 'Unknown error'),
-        )
-      }
+      })
     }
 
     const handleSubmit = async (options: { useVaultSearch?: boolean } = {}) => {
