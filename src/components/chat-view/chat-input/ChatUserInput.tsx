@@ -352,7 +352,19 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
       }
     }
 
-    const handleSubmit = (options: { useVaultSearch?: boolean } = {}) => {
+    const handleSubmit = async (options: { useVaultSearch?: boolean } = {}) => {
+      // Check if there are any pending documents that need to be processed
+      const hasPendingDocuments = mentionables.some(
+        (m) => m.type === 'document' && m.processingStatus === 'pending'
+      )
+      
+      if (hasPendingDocuments) {
+        new Notice('Please wait while documents are being processed...')
+        console.log('Submit blocked: Waiting for document processing to complete')
+        // Don't submit yet - let the async processing finish
+        return
+      }
+      
       const content = editorRef.current?.getEditorState()?.toJSON()
       content && onSubmit(content, options.useVaultSearch)
     }
