@@ -8,8 +8,8 @@ export interface PDFProcessorOptions {
 
 export class PDFProcessor {
   // Threshold for considering a PDF as "text-light" (characters per page)
-  // Increased to 500 to better detect scanned PDFs with minimal text
-  private static readonly TEXT_THRESHOLD_PER_PAGE = 500
+  // Set to 2000 to detect scanned PDFs - typical text PDFs have 3000+ chars/page
+  private static readonly TEXT_THRESHOLD_PER_PAGE = 2000
   private static tesseractModule: any = null
 
   /**
