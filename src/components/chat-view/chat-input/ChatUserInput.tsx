@@ -341,6 +341,16 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
         try {
           const processed = await createDocumentMentionable(doc, undefined, settings)
           
+          // Get the old key before updating
+          const oldPendingDoc = mentionablesRef.current.find(
+            (m) =>
+              m.type === 'document' &&
+              m.name === doc.name &&
+              m.processingStatus === 'pending'
+          )
+          const oldKey = oldPendingDoc ? getMentionableKey(serializeMentionable(oldPendingDoc)) : null
+          const newKey = getMentionableKey(serializeMentionable(processed))
+          
           // Update the pending document with processed content using ref to get current state
           setMentionables(
             mentionablesRef.current.map((m) =>
@@ -351,6 +361,11 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 : m,
             ),
           )
+          
+          // Update displayedMentionableKey if the processed document was being displayed
+          if (oldKey && oldKey === displayedMentionableKey) {
+            setDisplayedMentionableKey(newKey)
+          }
         } catch (error) {
           const message = error instanceof Error ? error.message : 'Unknown error'
           new Notice(`Failed to process ${doc.name}: ${message}`)
