@@ -321,7 +321,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
         const results = await Promise.all(
           documents.map(async (doc) => {
             try {
-              return await createDocumentMentionable(doc)
+              return await createDocumentMentionable(doc, undefined, settings)
             } catch (error) {
               const message =
                 error instanceof Error ? error.message : 'Unknown error'
