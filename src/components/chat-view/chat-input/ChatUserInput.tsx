@@ -213,8 +213,8 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 sourceFile: deserialized.file,
               }
               
-              // Process in background
-              (async () => {
+              // Process in background - use void to ignore the promise
+              void (async () => {
                 try {
                   // Read file and process it
                   const arrayBuffer = await app.vault.adapter.readBinary(
