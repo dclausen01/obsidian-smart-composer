@@ -153,38 +153,64 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
           console.log('Processing mentionable:', deserialized.type, deserialized)
 
-          // If it's a document with pending status, process it immediately
+          // If it's a document with pending status, process it in background
           if (
             deserialized.type === 'document' &&
             deserialized.processingStatus === 'pending' &&
             deserialized.sourceFile
           ) {
-            try {
-              console.log('Processing pending document:', deserialized.sourceFile.path)
-              // Read file and process it
-              const arrayBuffer = await app.vault.adapter.readBinary(
-                deserialized.sourceFile.path,
-              )
-              const blob = new Blob([arrayBuffer])
-              const file = new File([blob], deserialized.sourceFile.name, {
-                type: deserialized.mimeType,
-              })
+            console.log('🔍 @mention autocomplete: Found pending document', deserialized.name)
+            
+            // Start processing in background
+            void (async () => {
+              try {
+                if (!deserialized.sourceFile) return
+                
+                console.log('🔍 @mention autocomplete: Starting OCR for', deserialized.sourceFile.path)
+                // Read file and process it
+                const arrayBuffer = await app.vault.adapter.readBinary(
+                  deserialized.sourceFile.path,
+                )
+                const blob = new Blob([arrayBuffer])
+                const file = new File([blob], deserialized.sourceFile.name, {
+                  type: deserialized.mimeType,
+                })
 
-              // Process the document to extract content
-              const processed = await createDocumentMentionable(file, undefined, settings)
-              console.log('Document processed successfully:', processed.name, 'Content length:', processed.content.length)
-              return processed
-            } catch (error) {
-              console.error('Failed to process pending document:', error)
-              new Notice(
-                `Failed to process ${deserialized.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
-              )
-              // Return document with failed status
-              return {
-                ...deserialized,
-                processingStatus: 'failed' as const,
+                // Process the document to extract content
+                const processed = await createDocumentMentionable(file, undefined, settings)
+                console.log('🔍 @mention autocomplete: OCR complete', processed.name, 'Content:', processed.content.length)
+                
+                // Update the pending document with processed content
+                setMentionables(
+                  mentionablesRef.current.map((m) =>
+                    m.type === 'document' &&
+                    m.name === deserialized.name &&
+                    m.processingStatus === 'pending'
+                      ? processed
+                      : m,
+                  ),
+                )
+              } catch (error) {
+                console.error('Failed to process pending document:', error)
+                new Notice(
+                  `Failed to process ${deserialized.name}: ${error instanceof Error ? error.message : 'Unknown error'}`,
+                )
+                
+                // Update status to failed
+                setMentionables(
+                  mentionablesRef.current.map((m) =>
+                    m.type === 'document' &&
+                    m.name === deserialized.name &&
+                    m.processingStatus === 'pending'
+                      ? { ...m, processingStatus: 'failed' as const }
+                      : m,
+                  ),
+                )
               }
-            }
+            })()
+            
+            // Return pending document immediately
+            return deserialized
           }
 
           // If it's a file mention with a supported document format, convert to document
@@ -202,6 +228,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
             const mimeType = mimeTypeMap[ext]
             
             if (mimeType && supportedTypes.includes(mimeType)) {
+              console.log('🔍 @mention: Creating pending document for', deserialized.file.name)
               // Return pending document immediately to show spinner and disable submit
               const pendingDoc: MentionableDocument = {
                 type: 'document' as const,
@@ -213,8 +240,11 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 sourceFile: deserialized.file,
               }
               
+              console.log('🔍 @mention: Returning pending doc:', pendingDoc)
+              
               // Start processing in background
               void (async () => {
+                console.log('🔍 @mention: Starting background OCR for', deserialized.file.name)
                 try {
                   console.log('Processing file as document:', deserialized.file.path)
                   // Read file and process it
