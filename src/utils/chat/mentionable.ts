@@ -166,7 +166,8 @@ export function getMentionableKey(mentionable: SerializedMentionable): string {
     case 'image':
       return `image:${mentionable.name}:${mentionable.data.length}:${mentionable.data.slice(-32)}`
     case 'document':
-      return `document:${mentionable.name}:${mentionable.mimeType}:${mentionable.content.length}`
+      // Use name and mimeType only - content.length changes during processing
+      return `document:${mentionable.name}:${mentionable.mimeType}`
   }
 }
 
