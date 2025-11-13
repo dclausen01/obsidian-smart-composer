@@ -7,15 +7,25 @@ import {
 } from 'lucide-react'
 import { Platform } from 'obsidian'
 
-export function VaultChatButton({ onClick }: { onClick: () => void }) {
+export function VaultChatButton({ 
+  onClick, 
+  disabled = false 
+}: { 
+  onClick: () => void
+  disabled?: boolean
+}) {
   return (
     <>
       <Tooltip.Provider delayDuration={0}>
         <Tooltip.Root>
           <Tooltip.Trigger asChild>
             <div
-              className="smtcmp-chat-user-input-submit-button"
-              onClick={onClick}
+              className={`smtcmp-chat-user-input-submit-button ${disabled ? 'smtcmp-disabled' : ''}`}
+              onClick={disabled ? undefined : onClick}
+              style={{ 
+                opacity: disabled ? 0.5 : 1, 
+                cursor: disabled ? 'not-allowed' : 'pointer' 
+              }}
             >
               <div className="smtcmp-chat-user-input-submit-button-icons">
                 {Platform.isMacOS ? (

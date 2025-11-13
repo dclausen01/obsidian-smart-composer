@@ -392,12 +392,14 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
       })
     }
 
-    const handleSubmit = async (options: { useVaultSearch?: boolean } = {}) => {
-      // Check if there are any pending documents that need to be processed
-      const hasPendingDocuments = mentionables.some(
+    // Check if there are any pending documents that need to be processed
+    const hasPendingDocuments = useMemo(() => {
+      return mentionables.some(
         (m) => m.type === 'document' && m.processingStatus === 'pending'
       )
-      
+    }, [mentionables])
+
+    const handleSubmit = async (options: { useVaultSearch?: boolean } = {}) => {
       if (hasPendingDocuments) {
         new Notice('Please wait while documents are being processed...')
         console.log('Submit blocked: Waiting for document processing to complete')
@@ -487,11 +489,15 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           <div className="smtcmp-chat-user-input-controls__buttons">
             <ImageUploadButton onUpload={handleUploadImages} />
             <DocumentUploadButton onUpload={handleUploadDocuments} />
-            <SubmitButton onClick={() => handleSubmit()} />
+            <SubmitButton 
+              onClick={() => handleSubmit()} 
+              disabled={hasPendingDocuments}
+            />
             <VaultChatButton
               onClick={() => {
                 handleSubmit({ useVaultSearch: true })
               }}
+              disabled={hasPendingDocuments}
             />
           </div>
         </div>

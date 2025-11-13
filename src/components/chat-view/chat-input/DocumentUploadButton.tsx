@@ -33,7 +33,7 @@ export function DocumentUploadButton({
       <div className="smtcmp-chat-user-input-submit-button-icons">
         <FileText size={12} />
       </div>
-      <div>Document</div>
+      <div>Docs</div>
     </label>
   )
 }
