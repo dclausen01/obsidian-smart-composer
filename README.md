@@ -5,11 +5,25 @@
   ·
   <a href="https://github.com/dclausen01/obsidian-smart-composer/issues">Report Bug</a>
 </p>
+
 <h2>Fork of the original https://github.com/glowingjade/obsidian-smart-composer by Heesu Suh</h2>
 
 > [!NOTE]
+> **✨ What's New in v1.2.6**
+> - Added support for latest AI models: GPT-5.2, Opus 4.5, Gemini 3, and xAI's Grok 4.1
+>
 > **🚀 New Feature: Model Context Protocol (MCP) is now available!**
 > You can now connect Smart Composer to external AI tools and using the open MCP standard.
+
+> [!WARNING]
+> **⚠️ Maintenance Notice**
+>
+> This plugin is currently maintained by a single developer and is **not under active development**.
+> Occasional updates or bug fixes may still be released, but **issues and feature requests may not be reviewed promptly**.
+>
+> **🔗 Community Forks**
+> A list of community-maintained forks is available in the [Community Fork Collection](https://github.com/glowingjade/obsidian-smart-composer/discussions/496).
+> If you're maintaining a fork, feel free to add it there. And if you're simply interested in exploring alternative versions, you're welcome to check it out as well.
 
 ![SC1_Title.gif](https://github.com/user-attachments/assets/a50a1f80-39ff-4eba-8090-e3d75e7be98c)
 
