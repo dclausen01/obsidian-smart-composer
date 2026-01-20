@@ -9,11 +9,15 @@
 <h2>Fork of the original https://github.com/glowingjade/obsidian-smart-composer by Heesu Suh</h2>
 
 > [!NOTE]
-> **✨ What's New in v1.2.6**
-> - Added support for latest AI models: GPT-5.2, Opus 4.5, Gemini 3, and xAI's Grok 4.1
+> **What's New**
 >
-> **🚀 New Feature: Model Context Protocol (MCP) is now available!**
-> You can now connect Smart Composer to external AI tools and using the open MCP standard.
+> **v1.2.8** — Connect your Gemini account
+> 
+> **v1.2.7** — Connect your Claude or OpenAI account directly (no API key required)
+> 
+> **v1.2.6** — Support for GPT-5.2, Opus 4.5, Gemini 3, and Grok 4.1
+> 
+> **🔌 MCP Support** — Connect Smart Composer to external tools and data sources via the [Model Context Protocol](https://modelcontextprotocol.io)
 
 > [!WARNING]
 > **⚠️ Maintenance Notice**
@@ -24,6 +28,14 @@
 > **🔗 Community Forks**
 > A list of community-maintained forks is available in the [Community Fork Collection](https://github.com/glowingjade/obsidian-smart-composer/discussions/496).
 > If you're maintaining a fork, feel free to add it there. And if you're simply interested in exploring alternative versions, you're welcome to check it out as well.
+
+> ### Risks of connecting a Claude subscription
+> 
+> As of January 2026, Anthropic has restricted third-party OAuth access, citing Terms of Service violations.
+> 
+> Smart Composer's subscription connect uses the same OAuth-style flow that tools like OpenCode have used. There are reports of **Claude accounts being banned or restricted** when subscription OAuth is used via third-party clients (example: [https://github.com/anomalyco/opencode/issues/6930](https://github.com/anomalyco/opencode/issues/6930)). For **OpenAI (ChatGPT)** and **Google (Gemini)**, I have not seen comparable ban reports so far, but this is still not the same as official API access, and enforcement can change at any time.
+> 
+> **Use at your own risk.** Keep usage limited to personal, interactive sessions and avoid any automation.
 
 ![SC1_Title.gif](https://github.com/user-attachments/assets/a50a1f80-39ff-4eba-8090-e3d75e7be98c)
 
@@ -87,7 +99,7 @@ MCP lets you use powerful third-party tools and data sources right inside your c
 
 ### Additional Features
 
-- **Custom Model Selection**: Use your own model by setting your API Key (stored locally). Supported providers:
+- **Custom Model Selection**: Use your own model by setting your API Key (stored locally). Supported API providers:
   - OpenAI
   - Anthropic
   - Google (Gemini)
@@ -121,11 +133,12 @@ MCP lets you use powerful third-party tools and data sources right inside your c
 2. Navigate to "Community plugins" and click "Browse"
 3. Search for "Smart Composer" and click Install
 4. Enable the plugin in Community plugins
-5. Set up your API key in plugin settings
-   - OpenAI : [ChatGPT API Keys](https://platform.openai.com/api-keys)
-   - Anthropic : [Claude API Keys](https://console.anthropic.com/settings/keys)
-   - Gemini : [Gemini API Keys](https://aistudio.google.com/apikey)
-   - Groq : [Groq API Keys](https://console.groq.com/keys)
+5. Set up Smart Composer in plugin settings:
+   - **Connect subscription (no API key)**: Connect your Claude/OpenAI account in `Settings > Smart Composer > Connect your subscription`
+   - **API Providers (usage-based billing)**: Add an API key in `Settings > Smart Composer > Providers`
+     - OpenAI: [ChatGPT API Keys](https://platform.openai.com/api-keys)
+     - Anthropic: [Claude API Keys](https://console.anthropic.com/settings/keys)
+     - Gemini: [Gemini API Keys](https://aistudio.google.com/apikey)
 
 > [!TIP]
 > **Looking for a free option?**  

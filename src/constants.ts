@@ -7,6 +7,50 @@ export const APPLY_VIEW_TYPE = 'smtcmp-apply-view'
 
 export const PGLITE_DB_PATH = '.smtcmp_vector_db.tar.gz'
 
+export const CODEX_CLIENT_ID = 'app_EMoamEEZ73f0CkXaXp7hrann'
+export const CODEX_ISSUER = 'https://auth.openai.com'
+export const CODEX_REDIRECT_PORT = 1455 // Other ports are blocked by OpenAI
+export const CODEX_REDIRECT_URI = `http://localhost:${CODEX_REDIRECT_PORT}/auth/callback`
+export const CODEX_AUTH_CLAIMS_URL = 'https://api.openai.com/auth'
+export const CODEX_RESPONSES_ENDPOINT =
+  'https://chatgpt.com/backend-api/codex/responses'
+
+export const CLAUDE_CODE_CLIENT_ID = '9d1c250a-e61b-44d9-88ed-5944d1962f5e'
+export const CLAUDE_CODE_AUTHORIZE_BASE_URL = 'https://claude.ai'
+export const CLAUDE_CODE_CONSOLE_BASE_URL = 'https://console.anthropic.com'
+export const CLAUDE_CODE_OAUTH_TOKEN_ENDPOINT =
+  'https://console.anthropic.com/v1/oauth/token'
+export const CLAUDE_CODE_REDIRECT_URI =
+  'https://console.anthropic.com/oauth/code/callback'
+export const CLAUDE_CODE_MESSAGES_ENDPOINT =
+  'https://api.anthropic.com/v1/messages'
+export const CLAUDE_CODE_DEFAULT_BETAS = [
+  'oauth-2025-04-20',
+  'interleaved-thinking-2025-05-14',
+  'claude-code-20250219',
+]
+export const CLAUDE_CODE_SYSTEM_MESSAGE =
+  "You are Claude Code, Anthropic's official CLI for Claude."
+export const CLAUDE_CODE_USER_AGENT = 'claude-cli/2.1.2 (external, cli)'
+
+// Keep in sync with opencode-gemini-auth constants.
+export const GEMINI_OAUTH_CLIENT_ID =
+  '681255809395-oo8ft2oprdrnp9e3aqf6av3hmdib135j.apps.googleusercontent.com'
+export const GEMINI_OAUTH_CLIENT_SECRET = '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'
+export const GEMINI_OAUTH_REDIRECT_URI = 'http://localhost:8085/oauth2callback'
+export const GEMINI_OAUTH_SCOPES = [
+  'https://www.googleapis.com/auth/cloud-platform',
+  'https://www.googleapis.com/auth/userinfo.email',
+  'https://www.googleapis.com/auth/userinfo.profile',
+] as const
+export const GEMINI_CODE_ASSIST_ENDPOINT = 'https://cloudcode-pa.googleapis.com'
+export const GEMINI_CODE_ASSIST_HEADERS = {
+  'User-Agent': 'google-api-nodejs-client/9.15.1',
+  'X-Goog-Api-Client': 'gl-node/22.17.0',
+  'Client-Metadata':
+    'ideType=IDE_UNSPECIFIED,platform=PLATFORM_UNSPECIFIED,pluginType=GEMINI',
+} as const
+
 // Default model ids
 export const DEFAULT_CHAT_MODEL_ID = 'claude-sonnet-4.5'
 // gpt-4.1-mini is preferred over gpt-5-mini because gpt-5 models do not support
@@ -20,13 +64,34 @@ export const RECOMMENDED_MODELS_FOR_EMBEDDING = [
   'openai/text-embedding-3-small',
 ]
 
+export const PLAN_PROVIDER_TYPES: readonly LLMProviderType[] = [
+  'anthropic-plan',
+  'openai-plan',
+  'gemini-plan',
+] as const
 export const PROVIDER_TYPES_INFO = {
-  openai: {
-    label: 'OpenAI',
-    defaultProviderId: 'openai',
-    requireApiKey: true,
+  'anthropic-plan': {
+    label: 'Claude Plan',
+    defaultProviderId: 'anthropic-plan',
+    requireApiKey: false,
     requireBaseUrl: false,
-    supportEmbedding: true,
+    supportEmbedding: false,
+    additionalSettings: [],
+  },
+  'openai-plan': {
+    label: 'OpenAI Plan',
+    defaultProviderId: 'openai-plan',
+    requireApiKey: false,
+    requireBaseUrl: false,
+    supportEmbedding: false,
+    additionalSettings: [],
+  },
+  'gemini-plan': {
+    label: 'Gemini Plan',
+    defaultProviderId: 'gemini-plan',
+    requireApiKey: false,
+    requireBaseUrl: false,
+    supportEmbedding: false,
     additionalSettings: [],
   },
   anthropic: {
@@ -35,6 +100,14 @@ export const PROVIDER_TYPES_INFO = {
     requireApiKey: true,
     requireBaseUrl: false,
     supportEmbedding: false,
+    additionalSettings: [],
+  },
+  openai: {
+    label: 'OpenAI',
+    defaultProviderId: 'openai',
+    requireApiKey: true,
+    requireBaseUrl: false,
+    supportEmbedding: true,
     additionalSettings: [],
   },
   gemini: {
@@ -167,12 +240,24 @@ export const PROVIDER_TYPES_INFO = {
  */
 export const DEFAULT_PROVIDERS: readonly LLMProvider[] = [
   {
-    type: 'openai',
-    id: PROVIDER_TYPES_INFO.openai.defaultProviderId,
+    type: 'anthropic-plan',
+    id: PROVIDER_TYPES_INFO['anthropic-plan'].defaultProviderId,
+  },
+  {
+    type: 'openai-plan',
+    id: PROVIDER_TYPES_INFO['openai-plan'].defaultProviderId,
+  },
+  {
+    type: 'gemini-plan',
+    id: PROVIDER_TYPES_INFO['gemini-plan'].defaultProviderId,
   },
   {
     type: 'anthropic',
     id: PROVIDER_TYPES_INFO.anthropic.defaultProviderId,
+  },
+  {
+    type: 'openai',
+    id: PROVIDER_TYPES_INFO.openai.defaultProviderId,
   },
   {
     type: 'gemini',
@@ -214,6 +299,44 @@ export const DEFAULT_PROVIDERS: readonly LLMProvider[] = [
  * 2. If there's same model id in user's settings, it's data should be overwritten by default model
  */
 export const DEFAULT_CHAT_MODELS: readonly ChatModel[] = [
+  {
+    providerType: 'anthropic-plan',
+    providerId: PROVIDER_TYPES_INFO['anthropic-plan'].defaultProviderId,
+    id: 'claude-opus-4.5 (plan)',
+    model: 'claude-opus-4-5',
+    thinking: {
+      enabled: true,
+      budget_tokens: 8192,
+    },
+  },
+  {
+    providerType: 'anthropic-plan',
+    providerId: PROVIDER_TYPES_INFO['anthropic-plan'].defaultProviderId,
+    id: 'claude-sonnet-4.5 (plan)',
+    model: 'claude-sonnet-4-5',
+    thinking: {
+      enabled: true,
+      budget_tokens: 8192,
+    },
+  },
+  {
+    providerType: 'openai-plan',
+    providerId: PROVIDER_TYPES_INFO['openai-plan'].defaultProviderId,
+    id: 'gpt-5.2 (plan)',
+    model: 'gpt-5.2',
+  },
+  {
+    providerType: 'gemini-plan',
+    providerId: PROVIDER_TYPES_INFO['gemini-plan'].defaultProviderId,
+    id: 'gemini-3-pro-preview (plan)',
+    model: 'gemini-3-pro-preview',
+  },
+  {
+    providerType: 'gemini-plan',
+    providerId: PROVIDER_TYPES_INFO['gemini-plan'].defaultProviderId,
+    id: 'gemini-3-flash-preview (plan)',
+    model: 'gemini-3-flash-preview',
+  },
   {
     providerType: 'anthropic',
     providerId: PROVIDER_TYPES_INFO.anthropic.defaultProviderId,
