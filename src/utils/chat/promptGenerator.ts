@@ -32,6 +32,10 @@ import {
 
 import { YoutubeTranscript, isYoutubeUrl } from './youtube-transcript'
 
+export function escapeCodeFence(content: string): string {
+  return content.replace(/```/g, '\\`\\`\\`')
+}
+
 export class PromptGenerator {
   private getRagEngine: () => Promise<RAGEngine>
   private app: App
@@ -389,7 +393,7 @@ ${documents
       return `Document "${name}" - Status: ${processingStatus}`
     }
     return `\`\`\`${name} (${mimeType})
-${content}
+${escapeCodeFence(content)}
 \`\`\`\n`
   })
   .join('\n')}
