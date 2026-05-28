@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx'
 
-export interface XLSXProcessorOptions {
+export type XLSXProcessorOptions = {
   onProgress?: (status: string) => void
 }
 

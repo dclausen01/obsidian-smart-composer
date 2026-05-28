@@ -1,6 +1,6 @@
 import { loadPdfJs } from 'obsidian'
 
-export interface PDFProcessorOptions {
+export type PDFProcessorOptions = {
   onProgress?: (status: string) => void
   enableOCR?: boolean
   ocrLanguage?: string
