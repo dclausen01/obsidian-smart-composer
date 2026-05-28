@@ -49,11 +49,13 @@ export class GeminiProvider extends BaseLLMProvider<
 
   constructor(provider: Extract<LLMProvider, { type: 'gemini' }>) {
     super(provider)
-    if (provider.baseUrl) {
-      throw new Error('Gemini does not support custom base URL')
-    }
 
-    this.client = new GoogleGenAI({ apiKey: provider.apiKey ?? '' })
+    this.client = new GoogleGenAI({
+      apiKey: provider.apiKey ?? '',
+      httpOptions: provider.baseUrl
+        ? { baseUrl: provider.baseUrl.replace(/\/+$/, '') }
+        : undefined,
+    })
     this.apiKey = provider.apiKey ?? ''
   }
 
@@ -541,7 +543,11 @@ export class GeminiProvider extends BaseLLMProvider<
     return config
   }
 
-  async getEmbedding(model: string, text: string): Promise<number[]> {
+  async getEmbedding(
+    model: string,
+    text: string,
+    options?: { dimensions?: number },
+  ): Promise<number[]> {
     if (!this.apiKey) {
       throw new LLMAPIKeyNotSetException(
         `Provider ${this.provider.id} API key is missing. Please set it in settings menu.`,
@@ -552,6 +558,9 @@ export class GeminiProvider extends BaseLLMProvider<
       const response = await this.client.models.embedContent({
         model: model,
         contents: text,
+        ...(options?.dimensions && {
+          config: { outputDimensionality: options.dimensions },
+        }),
       })
       return response.embeddings?.[0]?.values ?? []
     } catch (error) {
