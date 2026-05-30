@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import { $nodesOfType, LexicalEditor, SerializedEditorState } from 'lexical'
+import { Notice } from 'obsidian'
 import {
   forwardRef,
   useCallback,
@@ -9,14 +10,13 @@ import {
   useRef,
   useState,
 } from 'react'
-import { Notice } from 'obsidian'
 
 import { useApp } from '../../../contexts/app-context'
 import { useSettings } from '../../../contexts/settings-context'
 import {
   Mentionable,
-  MentionableImage,
   MentionableDocument,
+  MentionableImage,
   SerializedMentionable,
 } from '../../../types/mentionable'
 import {
@@ -151,22 +151,20 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           const deserialized = deserializeMentionable(m, app)
           if (!deserialized) return null
 
-          console.log('Processing mentionable:', deserialized.type, deserialized)
-
           // If it's a document with pending status, process it in background
           if (
             deserialized.type === 'document' &&
             deserialized.processingStatus === 'pending' &&
             deserialized.sourceFile
           ) {
-            console.log('🔍 @mention autocomplete: Found pending document', deserialized.name)
-            
+            // Capture stable key before async starts
+            const pendingKey = getMentionableKey(serializeMentionable(deserialized))
+
             // Start processing in background
             void (async () => {
               try {
                 if (!deserialized.sourceFile) return
                 
-                console.log('🔍 @mention autocomplete: Starting OCR for', deserialized.sourceFile.path)
                 // Read file and process it
                 const arrayBuffer = await app.vault.adapter.readBinary(
                   deserialized.sourceFile.path,
@@ -178,14 +176,11 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
                 // Process the document to extract content
                 const processed = await createDocumentMentionable(file, undefined, settings)
-                console.log('🔍 @mention autocomplete: OCR complete', processed.name, 'Content:', processed.content.length)
                 
                 // Update the pending document with processed content
                 setMentionables(
                   mentionablesRef.current.map((m) =>
-                    m.type === 'document' &&
-                    m.name === deserialized.name &&
-                    m.processingStatus === 'pending'
+                    getMentionableKey(serializeMentionable(m)) === pendingKey
                       ? processed
                       : m,
                   ),
@@ -199,9 +194,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 // Update status to failed
                 setMentionables(
                   mentionablesRef.current.map((m) =>
-                    m.type === 'document' &&
-                    m.name === deserialized.name &&
-                    m.processingStatus === 'pending'
+                    getMentionableKey(serializeMentionable(m)) === pendingKey
                       ? { ...m, processingStatus: 'failed' as const }
                       : m,
                   ),
@@ -228,7 +221,6 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
             const mimeType = mimeTypeMap[ext]
             
             if (mimeType && supportedTypes.includes(mimeType)) {
-              console.log('🔍 @mention: Creating pending document for', deserialized.file.name)
               // Return pending document immediately to show spinner and disable submit
               const pendingDoc: MentionableDocument = {
                 type: 'document' as const,
@@ -240,13 +232,11 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 sourceFile: deserialized.file,
               }
               
-              console.log('🔍 @mention: Returning pending doc:', pendingDoc)
-              
+              const pendingKey = getMentionableKey(serializeMentionable(pendingDoc))
+
               // Start processing in background
               void (async () => {
-                console.log('🔍 @mention: Starting background OCR for', deserialized.file.name)
                 try {
-                  console.log('Processing file as document:', deserialized.file.path)
                   // Read file and process it
                   const arrayBuffer = await app.vault.adapter.readBinary(
                     deserialized.file.path,
@@ -258,14 +248,11 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
                   // Process the document to extract content
                   const processed = await createDocumentMentionable(file, undefined, settings)
-                  console.log('Document processed successfully:', processed.name, 'Content length:', processed.content.length)
                   
                   // Update the pending document with processed content
                   setMentionables(
                     mentionablesRef.current.map((m) =>
-                      m.type === 'document' &&
-                      m.name === deserialized.file.name &&
-                      m.processingStatus === 'pending'
+                      getMentionableKey(serializeMentionable(m)) === pendingKey
                         ? processed
                         : m,
                     ),
@@ -279,9 +266,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                   // Update status to failed
                   setMentionables(
                     mentionablesRef.current.map((m) =>
-                      m.type === 'document' &&
-                      m.name === deserialized.file.name &&
-                      m.processingStatus === 'pending'
+                      getMentionableKey(serializeMentionable(m)) === pendingKey
                         ? { ...m, processingStatus: 'failed' as const }
                         : m,
                     ),
@@ -289,6 +274,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
                 }
               })()
               
+
               return pendingDoc
             }
           }
@@ -406,21 +392,20 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           const processed = await createDocumentMentionable(doc, undefined, settings)
           
           // Get the old key before updating
-          const oldPendingDoc = mentionablesRef.current.find(
-            (m) =>
-              m.type === 'document' &&
-              m.name === doc.name &&
-              m.processingStatus === 'pending'
-          )
-          const oldKey = oldPendingDoc ? getMentionableKey(serializeMentionable(oldPendingDoc)) : null
+          const oldKey = getMentionableKey({
+            type: 'document' as const,
+            name: doc.name,
+            mimeType: doc.type,
+            content: '',
+            originalFileName: doc.name,
+            processingStatus: 'pending' as const,
+          })
           const newKey = getMentionableKey(serializeMentionable(processed))
           
           // Update the pending document with processed content using ref to get current state
           setMentionables(
             mentionablesRef.current.map((m) =>
-              m.type === 'document' &&
-              m.name === doc.name &&
-              m.processingStatus === 'pending'
+              getMentionableKey(serializeMentionable(m)) === oldKey
                 ? processed
                 : m,
             ),
@@ -438,9 +423,7 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
           // Update status to failed using ref to get current state
           setMentionables(
             mentionablesRef.current.map((m) =>
-              m.type === 'document' &&
-              m.name === doc.name &&
-              m.processingStatus === 'pending'
+              getMentionableKey(serializeMentionable(m)) === oldKey
                 ? { ...m, processingStatus: 'failed' as const }
                 : m,
             ),
@@ -459,7 +442,6 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
     const handleSubmit = async (options: { useVaultSearch?: boolean } = {}) => {
       if (hasPendingDocuments) {
         new Notice('Please wait while documents are being processed...')
-        console.log('Submit blocked: Waiting for document processing to complete')
         // Don't submit yet - let the async processing finish
         return
       }

@@ -5,7 +5,7 @@ import { DOCXProcessor as DOCXLib } from './docx-processor'
 import { PDFProcessor as PDFLib } from './pdf-processor'
 import { XLSXProcessor as XLSXLib } from './xlsx-processor'
 
-export interface DocumentProcessingResult {
+export type DocumentProcessingResult = {
   success: boolean
   content?: string
   error?: string
@@ -18,7 +18,7 @@ export interface DocumentProcessingResult {
   }
 }
 
-export interface DocumentProcessor {
+export type DocumentProcessor = {
   processFile(
     file: File, 
     onProgress?: (progress: number) => void,
