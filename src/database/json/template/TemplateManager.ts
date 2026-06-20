@@ -10,7 +10,12 @@ import {
 } from '../exception'
 
 import { TEMPLATE_SCHEMA_VERSION, Template, TemplateMetadata } from './types'
-import { plainTextToTemplateContent, templateContentToPlainText } from './utils'
+import {
+  extractTitle,
+  plainTextToTemplateContent,
+  stripFrontmatter,
+  templateContentToPlainText,
+} from './utils'
 
 export const PROMPT_TEMPLATES_FOLDER = 'Prompts'
 
@@ -141,8 +146,10 @@ export class TemplateManager extends AbstractJsonRepository<
    * - if a template exists but its content differs from the file, it is updated
    * - if a template exists and is unchanged, it is left untouched
    *
-   * The template name is derived from the markdown file name (without the
-   * `.md` extension).
+   * The YAML frontmatter block is stripped from each file (it holds note
+   * metadata, not prompt text). The template name is taken from the first
+   * top-level markdown heading (`# Title`) and falls back to the file name
+   * (without the `.md` extension) when no such heading is present.
    */
   public async syncTemplatesFromFolder(
     folderName: string = PROMPT_TEMPLATES_FOLDER,
@@ -161,16 +168,18 @@ export class TemplateManager extends AbstractJsonRepository<
 
     for (const file of files) {
       try {
-        const name = file.basename.trim()
-        if (name.length === 0) {
+        const raw = await this.app.vault.cachedRead(file)
+        // Drop frontmatter metadata and surrounding blank lines so change
+        // detection stays stable and the prompt text is free of metadata.
+        const content = stripFrontmatter(raw).trim()
+        if (content.length === 0) {
           continue
         }
 
-        // Normalize line endings so change detection is stable across platforms
-        const content = (await this.app.vault.cachedRead(file)).replace(
-          /\r\n/g,
-          '\n',
-        )
+        const name = (extractTitle(content) ?? file.basename).trim()
+        if (name.length === 0) {
+          continue
+        }
 
         const existingTemplate = await this.findByName(name)
         const newContent = plainTextToTemplateContent(content)

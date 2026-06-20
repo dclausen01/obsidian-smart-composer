@@ -1,5 +1,7 @@
 import {
+  extractTitle,
   plainTextToTemplateContent,
+  stripFrontmatter,
   templateContentToPlainText,
 } from './utils'
 
@@ -31,5 +33,43 @@ describe('template content conversion', () => {
     }
     expect(paragraph.type).toBe('paragraph')
     expect(paragraph.children).toHaveLength(3) // text, linebreak, text
+  })
+})
+
+describe('stripFrontmatter', () => {
+  it('removes a leading YAML frontmatter block', () => {
+    const input = `---\ntype: prompt\ntags: [a, b]\n---\n\n# Title\n\nBody`
+    expect(stripFrontmatter(input)).toBe('\n# Title\n\nBody')
+  })
+
+  it('leaves content without frontmatter untouched', () => {
+    const input = '# Title\n\nBody text'
+    expect(stripFrontmatter(input)).toBe(input)
+  })
+
+  it('does not treat a horizontal rule as frontmatter', () => {
+    const input = 'Some intro\n\n---\n\nMore text'
+    expect(stripFrontmatter(input)).toBe(input)
+  })
+
+  it('normalizes CRLF line endings', () => {
+    const input = '---\r\ntype: prompt\r\n---\r\nBody'
+    expect(stripFrontmatter(input)).toBe('Body')
+  })
+})
+
+describe('extractTitle', () => {
+  it('returns the first level-1 heading', () => {
+    expect(extractTitle('# Klausurerstellung Philosophie\n\nBody')).toBe(
+      'Klausurerstellung Philosophie',
+    )
+  })
+
+  it('ignores level-2 and deeper headings', () => {
+    expect(extractTitle('## Beschreibung\n\nBody')).toBeNull()
+  })
+
+  it('returns null when there is no heading', () => {
+    expect(extractTitle('Just some text')).toBeNull()
   })
 })

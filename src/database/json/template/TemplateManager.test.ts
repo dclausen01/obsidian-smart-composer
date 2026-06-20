@@ -140,6 +140,38 @@ describe('TemplateManager', () => {
       })
     })
 
+    it('strips frontmatter and uses the H1 heading as the template name', async () => {
+      const fileBody = [
+        '---',
+        'type: prompt',
+        'category: Analyse',
+        'tags: [Zusammenfassung]',
+        '---',
+        '',
+        '# Fasse zusammen',
+        '',
+        'Bitte fasse den Text zusammen.',
+      ].join('\n')
+
+      const manager = buildManager(
+        [makeFile('Prompts/Analyse/Fasse_zusammen.md', 'Fasse_zusammen')],
+        { 'Prompts/Analyse/Fasse_zusammen.md': fileBody },
+      )
+      jest.spyOn(manager, 'findByName').mockResolvedValue(null)
+      const createTemplate = jest
+        .spyOn(manager, 'createTemplate')
+        .mockResolvedValue({} as Template)
+
+      await manager.syncTemplatesFromFolder('Prompts')
+
+      expect(createTemplate).toHaveBeenCalledWith({
+        name: 'Fasse zusammen',
+        content: plainTextToTemplateContent(
+          '# Fasse zusammen\n\nBitte fasse den Text zusammen.',
+        ),
+      })
+    })
+
     it('updates a template when the file content changed', async () => {
       const manager = buildManager(
         [makeFile('Prompts/Existing.md', 'Existing')],
@@ -168,10 +200,9 @@ describe('TemplateManager', () => {
     })
 
     it('leaves unchanged templates untouched', async () => {
-      const manager = buildManager(
-        [makeFile('Prompts/Same.md', 'Same')],
-        { 'Prompts/Same.md': 'Identical content' },
-      )
+      const manager = buildManager([makeFile('Prompts/Same.md', 'Same')], {
+        'Prompts/Same.md': 'Identical content',
+      })
       jest.spyOn(manager, 'findByName').mockResolvedValue({
         id: 'same-id',
         name: 'Same',

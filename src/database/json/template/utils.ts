@@ -60,6 +60,27 @@ export function templateContentToPlainText(
   return content.nodes.map(serializedNodeToPlainText).join('')
 }
 
+/**
+ * Remove a leading YAML frontmatter block (`---\n ... \n---`) from a markdown
+ * string, if present. The frontmatter holds note metadata (type, tags, ...) and
+ * should not become part of the prompt text that is sent to the model.
+ */
+export function stripFrontmatter(text: string): string {
+  const normalized = text.replace(/\r\n/g, '\n')
+  const match = normalized.match(/^---\n[\s\S]*?\n---[ \t]*(?:\n|$)/)
+  return match ? normalized.slice(match[0].length) : normalized
+}
+
+/**
+ * Return the text of the first top-level markdown heading (`# Title`), or null
+ * if the text does not start a line with a single `#` heading. Used to derive a
+ * human-friendly template name from a prompt file.
+ */
+export function extractTitle(text: string): string | null {
+  const match = text.match(/^#[ \t]+(.+?)[ \t]*$/m)
+  return match ? match[1].trim() : null
+}
+
 function serializedNodeToPlainText(node: SerializedLexicalNode): string {
   if ('children' in node) {
     return (node as { children: SerializedLexicalNode[] }).children
