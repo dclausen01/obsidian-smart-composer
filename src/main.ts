@@ -11,6 +11,10 @@ import { DatabaseManager } from './database/DatabaseManager'
 import { PGLiteAbortedException } from './database/exception'
 import { migrateToJsonDatabase } from './database/json/migrateToJsonDatabase'
 import {
+  PROMPT_TEMPLATES_FOLDER,
+  TemplateManager,
+} from './database/json/template/TemplateManager'
+import {
   SmartComposerSettings,
   smartComposerSettingsSchema,
 } from './settings/schema/setting.types'
@@ -125,10 +129,24 @@ export default class SmartComposerPlugin extends Plugin {
       },
     })
 
+    this.addCommand({
+      id: 'sync-prompt-templates-from-vault',
+      name: `Sync prompt templates from "${PROMPT_TEMPLATES_FOLDER}" folder`,
+      callback: () =>
+        this.syncPromptTemplatesFromVault({ notifyWhenEmpty: true }),
+    })
+
     // This adds a settings tab so the user can configure various aspects of the plugin
     this.addSettingTab(new SmartComposerSettingTab(this.app, this))
 
     void this.migrateToJsonStorage()
+
+    // Import prompts stored as markdown files in the vault's "Prompts" folder
+    // into the template library. Wait for the layout to be ready so the vault
+    // file list is fully populated.
+    this.app.workspace.onLayoutReady(() => {
+      void this.syncPromptTemplatesFromVault()
+    })
   }
 
   onunload() {
@@ -312,6 +330,50 @@ ${validationResult.error.issues.map((v) => v.message).join('\n')}`)
   private registerTimeout(callback: () => void, timeout: number): void {
     const timeoutId = setTimeout(callback, timeout)
     this.timeoutIds.push(timeoutId)
+  }
+
+  private async syncPromptTemplatesFromVault({
+    notifyWhenEmpty = false,
+  }: { notifyWhenEmpty?: boolean } = {}) {
+    try {
+      const folder = this.app.vault.getAbstractFileByPath(
+        PROMPT_TEMPLATES_FOLDER,
+      )
+      if (!folder) {
+        if (notifyWhenEmpty) {
+          new Notice(
+            `No "${PROMPT_TEMPLATES_FOLDER}" folder found in this vault.`,
+          )
+        }
+        return
+      }
+
+      const templateManager = new TemplateManager(this.app)
+      const result = await templateManager.syncTemplatesFromFolder(
+        PROMPT_TEMPLATES_FOLDER,
+      )
+
+      if (result.created > 0 || result.updated > 0) {
+        new Notice(
+          `Smart Composer: synced prompt templates (added ${result.created}, updated ${result.updated})`,
+        )
+      } else if (notifyWhenEmpty) {
+        new Notice('Smart Composer: prompt templates are already up to date')
+      }
+
+      if (result.failed > 0) {
+        new Notice(
+          `Smart Composer: failed to sync ${result.failed} prompt template(s). Check the console for details.`,
+        )
+      }
+    } catch (error) {
+      console.error('Failed to sync prompt templates from vault:', error)
+      if (notifyWhenEmpty) {
+        new Notice(
+          'Smart Composer: failed to sync prompt templates. Check the console for details.',
+        )
+      }
+    }
   }
 
   private async migrateToJsonStorage() {
