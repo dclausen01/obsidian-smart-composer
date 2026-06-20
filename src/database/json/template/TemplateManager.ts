@@ -12,6 +12,7 @@ import {
 import { TEMPLATE_SCHEMA_VERSION, Template, TemplateMetadata } from './types'
 import {
   extractTitle,
+  isFolderNote,
   plainTextToTemplateContent,
   stripFrontmatter,
   templateContentToPlainText,
@@ -23,6 +24,7 @@ export type SyncTemplatesResult = {
   created: number
   updated: number
   unchanged: number
+  skipped: number
   failed: number
 }
 
@@ -150,6 +152,9 @@ export class TemplateManager extends AbstractJsonRepository<
    * metadata, not prompt text). The template name is taken from the first
    * top-level markdown heading (`# Title`) and falls back to the file name
    * (without the `.md` extension) when no such heading is present.
+   *
+   * Folder notes (a note named like its containing folder) and files that are
+   * empty after stripping frontmatter are skipped.
    */
   public async syncTemplatesFromFolder(
     folderName: string = PROMPT_TEMPLATES_FOLDER,
@@ -163,21 +168,31 @@ export class TemplateManager extends AbstractJsonRepository<
       created: 0,
       updated: 0,
       unchanged: 0,
+      skipped: 0,
       failed: 0,
     }
 
     for (const file of files) {
       try {
+        // Skip folder notes (e.g. `Recht/Recht.md`) — they describe the
+        // folder, not a prompt.
+        if (isFolderNote(file.path, file.basename)) {
+          result.skipped++
+          continue
+        }
+
         const raw = await this.app.vault.cachedRead(file)
         // Drop frontmatter metadata and surrounding blank lines so change
         // detection stays stable and the prompt text is free of metadata.
         const content = stripFrontmatter(raw).trim()
         if (content.length === 0) {
+          result.skipped++
           continue
         }
 
         const name = (extractTitle(content) ?? file.basename).trim()
         if (name.length === 0) {
+          result.skipped++
           continue
         }
 

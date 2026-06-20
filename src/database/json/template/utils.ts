@@ -81,6 +81,19 @@ export function extractTitle(text: string): string | null {
   return match ? match[1].trim() : null
 }
 
+/**
+ * Detect whether a markdown file is a "folder note", i.e. a note that lives
+ * inside a folder and shares the folder's name (e.g. `Recht/Recht.md`). Such
+ * notes typically describe the folder itself rather than being a prompt, so
+ * they are excluded from the prompt template import.
+ */
+export function isFolderNote(filePath: string, basename: string): boolean {
+  const segments = filePath.split('/')
+  if (segments.length < 2) return false
+  const parentFolderName = segments[segments.length - 2]
+  return parentFolderName.length > 0 && parentFolderName === basename
+}
+
 function serializedNodeToPlainText(node: SerializedLexicalNode): string {
   if ('children' in node) {
     return (node as { children: SerializedLexicalNode[] }).children
