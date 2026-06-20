@@ -10,6 +10,21 @@ import {
 } from '../exception'
 
 import { TEMPLATE_SCHEMA_VERSION, Template, TemplateMetadata } from './types'
+import {
+  extractTitle,
+  plainTextToTemplateContent,
+  stripFrontmatter,
+  templateContentToPlainText,
+} from './utils'
+
+export const PROMPT_TEMPLATES_FOLDER = 'Prompts'
+
+export type SyncTemplatesResult = {
+  created: number
+  updated: number
+  unchanged: number
+  failed: number
+}
 
 export class TemplateManager extends AbstractJsonRepository<
   Template,
@@ -120,6 +135,78 @@ export class TemplateManager extends AbstractJsonRepository<
     const fileName = this.generateFileName(template)
     await this.delete(fileName)
     return true
+  }
+
+  /**
+   * Import prompts stored as markdown files inside a vault folder into the
+   * template library so they become available via the `/` slash command.
+   *
+   * Markdown files are read recursively from the given folder. For each file:
+   * - if no template with the same name exists yet, a new template is created
+   * - if a template exists but its content differs from the file, it is updated
+   * - if a template exists and is unchanged, it is left untouched
+   *
+   * The YAML frontmatter block is stripped from each file (it holds note
+   * metadata, not prompt text). The template name is taken from the first
+   * top-level markdown heading (`# Title`) and falls back to the file name
+   * (without the `.md` extension) when no such heading is present.
+   */
+  public async syncTemplatesFromFolder(
+    folderName: string = PROMPT_TEMPLATES_FOLDER,
+  ): Promise<SyncTemplatesResult> {
+    const folderPrefix = `${folderName}/`
+    const files = this.app.vault
+      .getMarkdownFiles()
+      .filter((file) => file.path.startsWith(folderPrefix))
+
+    const result: SyncTemplatesResult = {
+      created: 0,
+      updated: 0,
+      unchanged: 0,
+      failed: 0,
+    }
+
+    for (const file of files) {
+      try {
+        const raw = await this.app.vault.cachedRead(file)
+        // Drop frontmatter metadata and surrounding blank lines so change
+        // detection stays stable and the prompt text is free of metadata.
+        const content = stripFrontmatter(raw).trim()
+        if (content.length === 0) {
+          continue
+        }
+
+        const name = (extractTitle(content) ?? file.basename).trim()
+        if (name.length === 0) {
+          continue
+        }
+
+        const existingTemplate = await this.findByName(name)
+        const newContent = plainTextToTemplateContent(content)
+
+        if (!existingTemplate) {
+          await this.createTemplate({ name, content: newContent })
+          result.created++
+        } else if (
+          templateContentToPlainText(existingTemplate.content) !== content
+        ) {
+          await this.updateTemplate(existingTemplate.id, {
+            content: newContent,
+          })
+          result.updated++
+        } else {
+          result.unchanged++
+        }
+      } catch (error) {
+        console.error(
+          `Failed to sync prompt template from "${file.path}":`,
+          error,
+        )
+        result.failed++
+      }
+    }
+
+    return result
   }
 
   public async searchTemplates(query: string): Promise<Template[]> {
