@@ -388,18 +388,17 @@ const ChatUserInput = forwardRef<ChatUserInputRef, ChatUserInputProps>(
 
       // Process documents in background and update status
       documents.forEach(async (doc) => {
+        const oldKey = getMentionableKey({
+          type: 'document' as const,
+          name: doc.name,
+          mimeType: doc.type,
+          content: '',
+          originalFileName: doc.name,
+          processingStatus: 'pending' as const,
+        })
+
         try {
           const processed = await createDocumentMentionable(doc, undefined, settings)
-          
-          // Get the old key before updating
-          const oldKey = getMentionableKey({
-            type: 'document' as const,
-            name: doc.name,
-            mimeType: doc.type,
-            content: '',
-            originalFileName: doc.name,
-            processingStatus: 'pending' as const,
-          })
           const newKey = getMentionableKey(serializeMentionable(processed))
           
           // Update the pending document with processed content using ref to get current state
