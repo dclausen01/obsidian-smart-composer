@@ -136,6 +136,46 @@ describe('TemplateManager', () => {
         created: 1,
         updated: 0,
         unchanged: 0,
+        skipped: 0,
+        failed: 0,
+      })
+    })
+
+    it('skips folder notes and empty files', async () => {
+      const manager = buildManager(
+        [
+          makeFile('Prompts/Recht/Recht.md', 'Recht'), // folder note
+          makeFile('Prompts/Prompts.md', 'Prompts'), // folder note for root
+          makeFile('Prompts/Empty.md', 'Empty'), // empty after frontmatter
+          makeFile('Prompts/Real.md', 'Real'),
+        ],
+        {
+          'Prompts/Recht/Recht.md': '# Recht\n\nFolder description',
+          'Prompts/Prompts.md': '# Prompts\n\nOverview',
+          'Prompts/Empty.md': '---\ntype: prompt\n---\n\n   \n',
+          'Prompts/Real.md': 'Real prompt',
+        },
+      )
+      const findByName = jest
+        .spyOn(manager, 'findByName')
+        .mockResolvedValue(null)
+      const createTemplate = jest
+        .spyOn(manager, 'createTemplate')
+        .mockResolvedValue({} as Template)
+
+      const result = await manager.syncTemplatesFromFolder('Prompts')
+
+      expect(findByName).toHaveBeenCalledTimes(1)
+      expect(createTemplate).toHaveBeenCalledTimes(1)
+      expect(createTemplate).toHaveBeenCalledWith({
+        name: 'Real',
+        content: plainTextToTemplateContent('Real prompt'),
+      })
+      expect(result).toEqual({
+        created: 1,
+        updated: 0,
+        unchanged: 0,
+        skipped: 3,
         failed: 0,
       })
     })
@@ -241,6 +281,7 @@ describe('TemplateManager', () => {
         created: 1,
         updated: 0,
         unchanged: 0,
+        skipped: 0,
         failed: 1,
       })
     })

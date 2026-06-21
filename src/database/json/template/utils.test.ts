@@ -1,5 +1,6 @@
 import {
   extractTitle,
+  isFolderNote,
   plainTextToTemplateContent,
   stripFrontmatter,
   templateContentToPlainText,
@@ -71,5 +72,23 @@ describe('extractTitle', () => {
 
   it('returns null when there is no heading', () => {
     expect(extractTitle('Just some text')).toBeNull()
+  })
+})
+
+describe('isFolderNote', () => {
+  it('detects a note named like its containing folder', () => {
+    expect(isFolderNote('Prompts/Recht/Recht.md', 'Recht')).toBe(true)
+  })
+
+  it('detects a folder note at the root of the prompts folder', () => {
+    expect(isFolderNote('Prompts/Prompts.md', 'Prompts')).toBe(true)
+  })
+
+  it('returns false for a regular prompt file', () => {
+    expect(isFolderNote('Prompts/Recht/Gutachten.md', 'Gutachten')).toBe(false)
+  })
+
+  it('returns false for a file without a parent folder', () => {
+    expect(isFolderNote('Recht.md', 'Recht')).toBe(false)
   })
 })
