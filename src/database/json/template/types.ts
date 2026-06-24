@@ -9,6 +9,10 @@ export type Template = {
   createdAt: number
   updatedAt: number
   schemaVersion: number
+  // Vault path of the markdown file this template was imported from, when it
+  // originates from the "Prompts" folder sync. Absent for manually created
+  // templates, which are never touched by the folder sync/cleanup.
+  sourcePath?: string
 }
 
 export type TemplateMetadata = {

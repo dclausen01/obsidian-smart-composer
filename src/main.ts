@@ -4,6 +4,7 @@ import { ApplyView } from './ApplyView'
 import { ChatView } from './ChatView'
 import { ChatProps } from './components/chat-view/Chat'
 import { InstallerUpdateRequiredModal } from './components/modals/InstallerUpdateRequiredModal'
+import { PromptCleanupModal } from './components/modals/PromptCleanupModal'
 import { APPLY_VIEW_TYPE, CHAT_VIEW_TYPE } from './constants'
 import { McpManager } from './core/mcp/mcpManager'
 import { RAGEngine } from './core/rag/ragEngine'
@@ -14,6 +15,7 @@ import {
   PROMPT_TEMPLATES_FOLDER,
   TemplateManager,
 } from './database/json/template/TemplateManager'
+import { Template } from './database/json/template/types'
 import {
   SmartComposerSettings,
   smartComposerSettingsSchema,
@@ -357,7 +359,7 @@ ${validationResult.error.issues.map((v) => v.message).join('\n')}`)
         new Notice(
           `Smart Composer: synced prompt templates (added ${result.created}, updated ${result.updated})`,
         )
-      } else if (notifyWhenEmpty) {
+      } else if (notifyWhenEmpty && result.orphaned.length === 0) {
         new Notice('Smart Composer: prompt templates are already up to date')
       }
 
@@ -365,6 +367,10 @@ ${validationResult.error.issues.map((v) => v.message).join('\n')}`)
         new Notice(
           `Smart Composer: failed to sync ${result.failed} prompt template(s). Check the console for details.`,
         )
+      }
+
+      if (result.orphaned.length > 0) {
+        this.promptToCleanupOrphanedTemplates(templateManager, result.orphaned)
       }
     } catch (error) {
       console.error('Failed to sync prompt templates from vault:', error)
@@ -374,6 +380,42 @@ ${validationResult.error.issues.map((v) => v.message).join('\n')}`)
         )
       }
     }
+  }
+
+  private promptToCleanupOrphanedTemplates(
+    templateManager: TemplateManager,
+    orphaned: Template[],
+  ) {
+    new PromptCleanupModal({
+      app: this.app,
+      templates: orphaned.map((template) => ({
+        id: template.id,
+        name: template.name,
+        sourcePath: template.sourcePath ?? '',
+      })),
+      onResolve: async ({ idsToDelete, idsToKeep }) => {
+        try {
+          for (const id of idsToDelete) {
+            await templateManager.deleteTemplate(id)
+          }
+          // Detach kept templates so they are no longer linked to the folder
+          // and won't be flagged as orphaned again.
+          for (const id of idsToKeep) {
+            await templateManager.detachTemplate(id)
+          }
+          if (idsToDelete.length > 0) {
+            new Notice(
+              `Smart Composer: deleted ${idsToDelete.length} prompt template(s)`,
+            )
+          }
+        } catch (error) {
+          console.error('Failed to clean up orphaned prompt templates:', error)
+          new Notice(
+            'Smart Composer: failed to delete prompt templates. Check the console for details.',
+          )
+        }
+      },
+    }).open()
   }
 
   private async migrateToJsonStorage() {
