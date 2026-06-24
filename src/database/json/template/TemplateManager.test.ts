@@ -89,9 +89,20 @@ describe('TemplateManager', () => {
   describe('syncTemplatesFromFolder', () => {
     const makeFile = (path: string, basename: string) => ({ path, basename })
 
+    const makeTemplate = (partial: Partial<Template>): Template => ({
+      id: 'id',
+      name: 'name',
+      content: plainTextToTemplateContent(''),
+      createdAt: 0,
+      updatedAt: 0,
+      schemaVersion: TEMPLATE_SCHEMA_VERSION,
+      ...partial,
+    })
+
     const buildManager = (
       files: { path: string; basename: string }[],
       fileContents: Record<string, string>,
+      existingTemplates: Template[] = [],
     ) => {
       const app = {
         vault: {
@@ -104,7 +115,11 @@ describe('TemplateManager', () => {
             ),
         },
       } as unknown as App
-      return new TemplateManager(app)
+      const manager = new TemplateManager(app)
+      jest
+        .spyOn(manager, 'getAllTemplates')
+        .mockResolvedValue(existingTemplates)
+      return manager
     }
 
     it('creates templates for new prompt files only inside the folder', async () => {
@@ -115,9 +130,6 @@ describe('TemplateManager', () => {
         ],
         { 'Prompts/sub/My Prompt.md': 'Prompt body' },
       )
-      const findByName = jest
-        .spyOn(manager, 'findByName')
-        .mockResolvedValue(null)
       const createTemplate = jest
         .spyOn(manager, 'createTemplate')
         .mockResolvedValue({} as Template)
@@ -125,11 +137,11 @@ describe('TemplateManager', () => {
 
       const result = await manager.syncTemplatesFromFolder('Prompts')
 
-      expect(findByName).toHaveBeenCalledTimes(1)
-      expect(findByName).toHaveBeenCalledWith('My Prompt')
+      expect(createTemplate).toHaveBeenCalledTimes(1)
       expect(createTemplate).toHaveBeenCalledWith({
         name: 'My Prompt',
         content: plainTextToTemplateContent('Prompt body'),
+        sourcePath: 'Prompts/sub/My Prompt.md',
       })
       expect(updateTemplate).not.toHaveBeenCalled()
       expect(result).toEqual({
@@ -138,6 +150,7 @@ describe('TemplateManager', () => {
         unchanged: 0,
         skipped: 0,
         failed: 0,
+        orphaned: [],
       })
     })
 
@@ -156,20 +169,17 @@ describe('TemplateManager', () => {
           'Prompts/Real.md': 'Real prompt',
         },
       )
-      const findByName = jest
-        .spyOn(manager, 'findByName')
-        .mockResolvedValue(null)
       const createTemplate = jest
         .spyOn(manager, 'createTemplate')
         .mockResolvedValue({} as Template)
 
       const result = await manager.syncTemplatesFromFolder('Prompts')
 
-      expect(findByName).toHaveBeenCalledTimes(1)
       expect(createTemplate).toHaveBeenCalledTimes(1)
       expect(createTemplate).toHaveBeenCalledWith({
         name: 'Real',
         content: plainTextToTemplateContent('Real prompt'),
+        sourcePath: 'Prompts/Real.md',
       })
       expect(result).toEqual({
         created: 1,
@@ -177,6 +187,7 @@ describe('TemplateManager', () => {
         unchanged: 0,
         skipped: 3,
         failed: 0,
+        orphaned: [],
       })
     })
 
@@ -197,7 +208,6 @@ describe('TemplateManager', () => {
         [makeFile('Prompts/Analyse/Fasse_zusammen.md', 'Fasse_zusammen')],
         { 'Prompts/Analyse/Fasse_zusammen.md': fileBody },
       )
-      jest.spyOn(manager, 'findByName').mockResolvedValue(null)
       const createTemplate = jest
         .spyOn(manager, 'createTemplate')
         .mockResolvedValue({} as Template)
@@ -209,6 +219,7 @@ describe('TemplateManager', () => {
         content: plainTextToTemplateContent(
           '# Fasse zusammen\n\nBitte fasse den Text zusammen.',
         ),
+        sourcePath: 'Prompts/Analyse/Fasse_zusammen.md',
       })
     })
 
@@ -216,15 +227,15 @@ describe('TemplateManager', () => {
       const manager = buildManager(
         [makeFile('Prompts/Existing.md', 'Existing')],
         { 'Prompts/Existing.md': 'New content' },
+        [
+          makeTemplate({
+            id: 'existing-id',
+            name: 'Existing',
+            content: plainTextToTemplateContent('Old content'),
+            sourcePath: 'Prompts/Existing.md',
+          }),
+        ],
       )
-      jest.spyOn(manager, 'findByName').mockResolvedValue({
-        id: 'existing-id',
-        name: 'Existing',
-        content: plainTextToTemplateContent('Old content'),
-        createdAt: 0,
-        updatedAt: 0,
-        schemaVersion: TEMPLATE_SCHEMA_VERSION,
-      })
       const createTemplate = jest.spyOn(manager, 'createTemplate')
       const updateTemplate = jest
         .spyOn(manager, 'updateTemplate')
@@ -234,23 +245,26 @@ describe('TemplateManager', () => {
 
       expect(createTemplate).not.toHaveBeenCalled()
       expect(updateTemplate).toHaveBeenCalledWith('existing-id', {
+        name: 'Existing',
         content: plainTextToTemplateContent('New content'),
+        sourcePath: 'Prompts/Existing.md',
       })
       expect(result.updated).toBe(1)
     })
 
     it('leaves unchanged templates untouched', async () => {
-      const manager = buildManager([makeFile('Prompts/Same.md', 'Same')], {
-        'Prompts/Same.md': 'Identical content',
-      })
-      jest.spyOn(manager, 'findByName').mockResolvedValue({
-        id: 'same-id',
-        name: 'Same',
-        content: plainTextToTemplateContent('Identical content'),
-        createdAt: 0,
-        updatedAt: 0,
-        schemaVersion: TEMPLATE_SCHEMA_VERSION,
-      })
+      const manager = buildManager(
+        [makeFile('Prompts/Same.md', 'Same')],
+        { 'Prompts/Same.md': 'Identical content' },
+        [
+          makeTemplate({
+            id: 'same-id',
+            name: 'Same',
+            content: plainTextToTemplateContent('Identical content'),
+            sourcePath: 'Prompts/Same.md',
+          }),
+        ],
+      )
       const createTemplate = jest.spyOn(manager, 'createTemplate')
       const updateTemplate = jest.spyOn(manager, 'updateTemplate')
 
@@ -261,6 +275,59 @@ describe('TemplateManager', () => {
       expect(result.unchanged).toBe(1)
     })
 
+    it('adopts a pre-existing template by name and links it to the source file', async () => {
+      const manager = buildManager(
+        [makeFile('Prompts/Same.md', 'Same')],
+        { 'Prompts/Same.md': 'Identical content' },
+        [
+          makeTemplate({
+            id: 'same-id',
+            name: 'Same',
+            content: plainTextToTemplateContent('Identical content'),
+            // no sourcePath yet (created before the feature / manually)
+          }),
+        ],
+      )
+      const updateTemplate = jest
+        .spyOn(manager, 'updateTemplate')
+        .mockResolvedValue({} as Template)
+
+      const result = await manager.syncTemplatesFromFolder('Prompts')
+
+      expect(updateTemplate).toHaveBeenCalledWith('same-id', {
+        sourcePath: 'Prompts/Same.md',
+      })
+      expect(result.unchanged).toBe(1)
+    })
+
+    it('reports imported templates whose source file was removed as orphaned', async () => {
+      const orphan = makeTemplate({
+        id: 'orphan-id',
+        name: 'Gone',
+        sourcePath: 'Prompts/Gone.md',
+      })
+      const manager = buildManager(
+        [makeFile('Prompts/Kept.md', 'Kept')],
+        { 'Prompts/Kept.md': 'Kept content' },
+        [
+          orphan,
+          makeTemplate({
+            id: 'kept-id',
+            name: 'Kept',
+            content: plainTextToTemplateContent('Kept content'),
+            sourcePath: 'Prompts/Kept.md',
+          }),
+          // A manually created template (no sourcePath) is never orphaned.
+          makeTemplate({ id: 'manual-id', name: 'Manual' }),
+        ],
+      )
+      jest.spyOn(manager, 'createTemplate').mockResolvedValue({} as Template)
+
+      const result = await manager.syncTemplatesFromFolder('Prompts')
+
+      expect(result.orphaned).toEqual([orphan])
+    })
+
     it('counts a failure without aborting the rest of the sync', async () => {
       const manager = buildManager(
         [
@@ -269,7 +336,6 @@ describe('TemplateManager', () => {
         ],
         { 'Prompts/Bad.md': 'x', 'Prompts/Good.md': 'y' },
       )
-      jest.spyOn(manager, 'findByName').mockResolvedValue(null)
       jest
         .spyOn(manager, 'createTemplate')
         .mockRejectedValueOnce(new Error('boom'))
@@ -283,6 +349,7 @@ describe('TemplateManager', () => {
         unchanged: 0,
         skipped: 0,
         failed: 1,
+        orphaned: [],
       })
     })
   })

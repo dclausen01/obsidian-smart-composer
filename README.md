@@ -115,7 +115,7 @@ MCP lets you use powerful third-party tools and data sources right inside your c
 - **Custom System Prompts**: Define your own system prompts that will be applied to every chat conversation.
 - **Prompt Templates**: Create and reuse templates for common queries by typing `/` in the chat view. Perfect for standardizing repetitive tasks.
   - Create templates from any selected text with one click
-  - **Sync prompts from a vault folder**: Keep a `Prompts` folder (with any subfolders) of markdown files in your vault and they are automatically imported as templates available via `/`. Smart Composer reads the folder recursively on startup — adding new prompts and updating changed ones. The template name is taken from the file's first `# heading` (falling back to the file name), and YAML frontmatter is ignored. Folder notes (a note named like its folder) and empty files are skipped. You can also trigger the import manually with the command *"Sync prompt templates from 'Prompts' folder"*.
+  - **Sync prompts from a vault folder**: Keep a `Prompts` folder (with any subfolders) of markdown files in your vault and they are automatically imported as templates available via `/`. Smart Composer reads the folder recursively on startup — adding new prompts and updating changed ones. The template name is taken from the file's first `# heading` (falling back to the file name), and YAML frontmatter is ignored. Folder notes (a note named like its folder) and empty files are skipped. When prompt files are deleted from the folder, Smart Composer asks whether to also remove the matching library templates (all or only some). You can also trigger the import manually with the command *"Sync prompt templates from 'Prompts' folder"*.
 
 ## Getting Started
 
